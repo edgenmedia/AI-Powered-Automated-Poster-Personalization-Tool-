@@ -60,6 +60,29 @@ export default function MobileDock() {
   const [instruction, setInstruction] = useState("");
 
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
+  const [selectedFont, setSelectedFont] = useState(selectedLayer?.fontFamily || "Inter");
+
+  useEffect(() => {
+    if (selectedLayer) {
+      setSelectedFont(selectedLayer.fontFamily);
+    }
+  }, [selectedLayer?.id, selectedLayer?.fontFamily]);
+
+  const handleFontChange = async (newFont: string) => {
+    if (!selectedLayer) return;
+    setSelectedFont(newFont);
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
+    const loadPromise = (async () => {
+      if (typeof window !== "undefined" && "fonts" in document) {
+        await document.fonts.load(`12px "${newFont}"`);
+      }
+    })();
+
+    await Promise.race([loadPromise, timeoutPromise]);
+    updateLayer(selectedLayer.id, { fontFamily: newFont });
+  };
+
   const supportsEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
 
   // Auto-switch to "edit" tab when a text layer is selected on canvas
@@ -360,7 +383,7 @@ export default function MobileDock() {
 
                   <div>
                     <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">Font Family</label>
-                    <select value={selectedLayer.fontFamily} onChange={(e) => updateLayer(selectedLayer.id, { fontFamily: e.target.value })} className="mt-1 w-full bg-[#1f2937] border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
+                    <select value={selectedFont} onChange={(e) => handleFontChange(e.target.value)} className="mt-1 w-full bg-[#1f2937] border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
                       <option value="Inter">Inter</option>
                       <option value="Poppins">Poppins</option>
                       <option value="Montserrat">Montserrat</option>

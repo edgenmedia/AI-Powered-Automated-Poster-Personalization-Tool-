@@ -70,6 +70,25 @@ export default function CanvasArea() {
     }
   }, [posterUrl, imageEl]);
 
+  // Force stage redraw when custom Google Fonts are fully loaded in the browser
+  useEffect(() => {
+    if (typeof window === "undefined" || !("fonts" in document)) return;
+
+    const loadFonts = async () => {
+      try {
+        const promises = layers.map((layer) => document.fonts.load(`12px "${layer.fontFamily}"`));
+        await Promise.all(promises);
+        if (stageRef.current) {
+          stageRef.current.batchDraw();
+        }
+      } catch (err) {
+        console.error("Font loading error:", err);
+      }
+    };
+
+    loadFonts();
+  }, [layers]);
+
   // Fit poster template in the centered workspace
   let scale = 1;
   let basePosterWidth = 360;

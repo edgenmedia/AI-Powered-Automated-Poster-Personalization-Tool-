@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import JSZip from "jszip";
 
 export interface TextLayer {
   id: string;
@@ -62,6 +63,10 @@ export interface EditorContextType {
   addLayerForColumn: (column: string) => void;
   removeLayer: (id: string) => void;
   updateLayer: (id: string, updates: Partial<TextLayer>) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 
   // Active Preview Row
   activePreviewRowIndex: number;
@@ -97,6 +102,12 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
+interface HistoryState {
+  past: TextLayer[][];
+  present: TextLayer[];
+  future: TextLayer[][];
+}
+
 export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [posterFile, setPosterFileState] = useState<File | null>(null);
@@ -108,7 +119,96 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [csvValidation, setCsvValidation] = useState<CSVValidation | null>(null);
   const [totalCSVRows, setTotalCSVRows] = useState(0);
 
-  const [layers, setLayers] = useState<TextLayer[]>([]);
+  const [history, setHistory] = useState<HistoryState>({
+    past: [],
+    present: [],
+    future: [],
+  });
+
+  const layers = history.present;
+
+  const setLayers = React.useCallback((
+    action: React.SetStateAction<TextLayer[]>
+  ) => {
+    setHistory((prevHistory) => {
+      const nextPresent = typeof action === "function" ? action(prevHistory.present) : action;
+      if (nextPresent === prevHistory.present) return prevHistory;
+
+      const newPast = [...prevHistory.past, prevHistory.present];
+      return {
+        past: newPast.length > 50 ? newPast.slice(newPast.length - 50) : newPast,
+        present: nextPresent,
+        future: [],
+      };
+    });
+  }, []);
+
+  const undo = React.useCallback(() => {
+    setHistory((prevHistory) => {
+      if (prevHistory.past.length === 0) return prevHistory;
+
+      const previous = prevHistory.past[prevHistory.past.length - 1];
+      const newPast = prevHistory.past.slice(0, prevHistory.past.length - 1);
+
+      return {
+        past: newPast,
+        present: previous,
+        future: [prevHistory.present, ...prevHistory.future],
+      };
+    });
+  }, []);
+
+  const redo = React.useCallback(() => {
+    setHistory((prevHistory) => {
+      if (prevHistory.future.length === 0) return prevHistory;
+
+      const next = prevHistory.future[0];
+      const newFuture = prevHistory.future.slice(1);
+
+      return {
+        past: [...prevHistory.past, prevHistory.present],
+        present: next,
+        future: newFuture,
+      };
+    });
+  }, []);
+
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.shiftKey) {
+          if (e.key === "z" || e.key === "Z") {
+            e.preventDefault();
+            redo();
+          }
+        } else {
+          if (e.key === "z" || e.key === "Z") {
+            e.preventDefault();
+            undo();
+          } else if (e.key === "y" || e.key === "Y") {
+            e.preventDefault();
+            redo();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
+
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [activePreviewRowIndex, setActivePreviewRowIndex] = useState(0);
 
@@ -329,7 +429,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   };
 
   const exportPostersZip = async () => {
-    if (!posterFile || !csvFile) {
+    if (!posterFile || csvPreviews.length === 0) {
       alert("Please upload both a poster template and a CSV/Excel file.");
       return;
     }
@@ -340,47 +440,170 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
     setIsExporting(true);
     try {
-      const formData = new FormData();
-      formData.append("poster", posterFile);
-      formData.append("data_file", csvFile);
+      // 1. Create a JSZip instance
+      const zip = new JSZip();
+
+      // 2. Load the template image
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(posterFile);
       
-      // format mappings to match FieldMapping Pydantic model in backend
-      const mappings = layers.map((l) => ({
-        column: l.column,
-        x: l.x,
-        y: l.y,
-        width: l.width,
-        fontSize: l.fontSize,
-        fontColor: l.fontColor,
-        fontFamily: l.fontFamily,
-        fontWeight: l.fontWeight,
-        align: l.align,
-      }));
-
-      formData.append("mappings", JSON.stringify(mappings));
-      formData.append("row_edits", JSON.stringify(rowEdits));
-
-      const res = await fetch(`${API_BASE_URL}/api/generate`, {
-        method: "POST",
-        body: formData,
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load poster image"));
+        img.src = objectUrl;
       });
 
-      if (!res.ok) {
-        throw new Error("Bulk generation failed on server");
+      const imgW = img.naturalWidth;
+      const imgH = img.naturalHeight;
+
+      // 3. Create a canvas at original resolution
+      const canvas = document.createElement("canvas");
+      canvas.width = imgW;
+      canvas.height = imgH;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Could not get 2D context");
+
+      // 4. Find name column for file naming
+      let nameColumn: string | null = null;
+      if (csvPreviews.length > 0) {
+        const firstRow = csvPreviews[0];
+        for (const col of Object.keys(firstRow)) {
+          if (["name", "fullname", "full name", "first name", "customer"].includes(col.toLowerCase())) {
+            nameColumn = col;
+            break;
+          }
+        }
       }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const existingNames = new Set<string>();
+
+      // Helper function to wrap text
+      const wrapText = (textStr: string, maxWidth: number) => {
+        if (!maxWidth || maxWidth <= 0) return [textStr];
+        const words = textStr.split(/\s+/);
+        if (words.length === 0) return [];
+        const linesList: string[] = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+          const word = words[i];
+          const testLine = currentLine + " " + word;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width <= maxWidth) {
+            currentLine = testLine;
+          } else {
+            linesList.push(currentLine);
+            currentLine = word;
+          }
+        }
+        linesList.push(currentLine);
+        return linesList;
+      };
+
+      // 5. Generate image for each row
+      for (let idx = 0; idx < csvPreviews.length; idx++) {
+        const row = csvPreviews[idx];
+        
+        // Clear canvas and draw background template
+        ctx.clearRect(0, 0, imgW, imgH);
+        ctx.drawImage(img, 0, 0, imgW, imgH);
+
+        // Draw each text layer
+        for (const layer of layers) {
+          // Get text value, checking for manual row overrides
+          let textVal = row[layer.column] !== undefined ? String(row[layer.column]) : "";
+          if (rowEdits[idx] && rowEdits[idx][layer.column] !== undefined) {
+            textVal = String(rowEdits[idx][layer.column]);
+          }
+          textVal = textVal.trim();
+          if (!textVal) continue;
+
+          // Configure text styles
+          const fontStyle = `${layer.fontWeight} ${layer.fontSize}px "${layer.fontFamily}"`;
+          ctx.font = fontStyle;
+          ctx.fillStyle = layer.fontColor;
+          ctx.textBaseline = "top";
+
+          // Calculate wrapped lines
+          const lines = wrapText(textVal, layer.width);
+          
+          // Line height is 1.15 of font size
+          const lineHeight = layer.fontSize * 1.15;
+          let yOffset = layer.y;
+
+          for (const line of lines) {
+            const metrics = ctx.measureText(line);
+            let xDraw = layer.x;
+
+            if (layer.width && layer.width > 0) {
+              if (layer.align === "center") {
+                ctx.textAlign = "center";
+                xDraw = layer.x + layer.width / 2;
+              } else if (layer.align === "right") {
+                ctx.textAlign = "right";
+                xDraw = layer.x + layer.width;
+              } else {
+                ctx.textAlign = "left";
+                xDraw = layer.x;
+              }
+            } else {
+              ctx.textAlign = layer.align || "left";
+              xDraw = layer.x;
+            }
+
+            ctx.fillText(line, xDraw, yOffset);
+            yOffset += lineHeight;
+          }
+        }
+
+        // Convert canvas to blob
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/png");
+        });
+
+        if (blob) {
+          // Generate unique file name
+          let baseName = "";
+          if (nameColumn && row[nameColumn]) {
+            baseName = String(row[nameColumn])
+              .trim()
+              .replace(/[^a-zA-Z0-9\s\-_]/g, "")
+              .replace(/\s+/g, "_");
+          }
+          if (!baseName) {
+            baseName = `poster_${idx + 1}`;
+          }
+
+          let candidate = baseName.toLowerCase();
+          let counter = 1;
+          while (existingNames.has(candidate)) {
+            candidate = `${baseName.toLowerCase()}_${counter}`;
+            counter++;
+          }
+          existingNames.add(candidate);
+          const fileName = counter > 1 ? `${baseName}_${counter - 1}.png` : `${baseName}.png`;
+
+          zip.file(fileName, blob);
+        }
+      }
+
+      // 6. Generate ZIP file and trigger download
+      const content = await zip.generateAsync({ type: "blob" });
+      const downloadUrl = URL.createObjectURL(content);
+
       const a = document.createElement("a");
-      a.href = url;
+      a.href = downloadUrl;
       a.download = `${posterFile.name.split(".")[0]}_personalized_posters.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+
+      // Clean up URLs
+      URL.revokeObjectURL(objectUrl);
+      URL.revokeObjectURL(downloadUrl);
     } catch (err) {
-      console.error("ZIP export failed:", err);
-      alert("Error generating bulk zip file. Verify backend server logs.");
+      console.error("Client-side ZIP export failed:", err);
+      alert("Error generating bulk zip file in browser. Please check console.");
     } finally {
       setIsExporting(false);
     }
@@ -517,6 +740,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         placingColumn,
         setPlacingColumn,
         rowEdits,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
       }}
     >
       {children}

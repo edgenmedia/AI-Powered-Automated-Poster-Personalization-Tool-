@@ -176,6 +176,35 @@ def fit_text_to_width(
             
     return text[:5] + "...", min_font_size
 
+from typing import List
+
+def wrap_text_to_width(text: str, font: ImageFont.FreeTypeFont, max_width: float) -> List[str]:
+    if not max_width or max_width <= 0:
+        return [text]
+    words = text.split()
+    if not words:
+        return []
+    lines = []
+    current_line = []
+    
+    for word in words:
+        test_line = " ".join(current_line + [word]) if current_line else word
+        bbox = font.getbbox(test_line)
+        w = bbox[2] - bbox[0]
+        if w <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(" ".join(current_line))
+                current_line = [word]
+            else:
+                lines.append(word)
+                current_line = []
+                
+    if current_line:
+        lines.append(" ".join(current_line))
+    return lines
+
 def draw_personalized_text(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -189,37 +218,38 @@ def draw_personalized_text(
     box_width: Optional[float] = None
 ) -> None:
     """
-    Draws text onto the image with specified styles exactly at (x, y) supporting alignment, bounding box width, compression, and trimming.
+    Draws text onto the image with specified styles exactly at (x, y) supporting alignment, bounding box width, and word wrapping.
     """
-    actual_text = text
-    actual_font_size = font_size
-    
-    if box_width and box_width > 0:
-        actual_text, actual_font_size = fit_text_to_width(
-            text=text,
-            font_family=font_family,
-            font_weight=font_weight,
-            base_font_size=font_size,
-            max_width=box_width
-        )
-        
     font_path = get_font_path(font_family, font_weight)
     
-    # Setup initial font
+    # Setup initial font at the selected size
     if font_path:
-        font = ImageFont.truetype(font_path, actual_font_size)
+        font = ImageFont.truetype(font_path, font_size)
     else:
         font = ImageFont.load_default()
         
-    x_draw = x
+    # Wrap text to width if a box width is provided
+    lines = wrap_text_to_width(text, font, box_width)
     
-    # Apply text alignment calculations if a bounding box width is provided
-    if box_width and box_width > 0:
-        text_w, text_h = get_text_size(actual_text, font)
-        if align == "center":
-            x_draw = x + (box_width - text_w) / 2
-        elif align == "right":
-            x_draw = x + box_width - text_w
+    # Calculate constant line height for consistent spacing
+    if hasattr(font, "getmetrics"):
+        ascent, descent = font.getmetrics()
+        line_h = ascent + descent
+    else:
+        _, line_h = get_text_size("Ay", font)
         
-    # Draw text. Note: Pillow hex color works out of the box (e.g. #FF0000)
-    draw.text((x_draw, y), actual_text, font=font, fill=font_color)
+    y_offset = y
+    for line in lines:
+        line_w, _ = get_text_size(line, font)
+        x_draw = x
+        
+        # Apply text alignment calculations per line
+        if box_width and box_width > 0:
+            if align == "center":
+                x_draw = x + (box_width - line_w) / 2
+            elif align == "right":
+                x_draw = x + box_width - line_w
+                
+        # Draw the line of text using top-left anchor to match Konva's rendering behavior
+        draw.text((x_draw, y_offset), line, font=font, fill=font_color, anchor="lt")
+        y_offset += line_h * 1.15  # Apply 1.15 line height spacing to match browser canvas
