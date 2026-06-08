@@ -1,0 +1,11 @@
+# Node / Frontend Dependency & Build folders
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+
+
+
+# OS Files
+.DS_Store
+Thumbs.db

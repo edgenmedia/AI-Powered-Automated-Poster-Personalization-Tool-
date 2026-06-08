@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Posterly – AI‑Powered Poster Personalization</title>
+  <meta name="description" content="Turn one marketing poster into hundreds of personalized, AI‑generated creatives. Premium SaaS platform with dark‑mode glassmorphism design.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --accent-violet: #8a2be2;
+      --accent-teal: #00e5d9;
+      --text-primary: #e0e6f1;
+      --glass-bg: rgba(255, 255, 255, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+    /* Glassmorphism utility */
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      border-radius: 1rem;
+    }
+    /* Navigation */
+    nav {
+      position: sticky; top: 0; z-index: 1000; backdrop-filter: blur(8px);
+      background: rgba(11,15,25,0.85);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 4rem; }
+    .nav-links { display: flex; gap: 1.5rem; }
+    .nav-links a { font-weight: 600; font-size: 0.95rem; opacity: 0.85; transition: opacity .2s; }
+    .nav-links a:hover { opacity: 1; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-violet), var(--accent-teal));
+      color: #fff; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 600;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(138,43,226,.3); }
+    /* Hero */
+    .hero {
+      min-height: 80vh;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+      background: radial-gradient(circle at 20% 20%, var(--accent-violet) 0%, transparent 70%),
+                  radial-gradient(circle at 80% 80%, var(--accent-teal) 0%, transparent 70%);
+      background-size: 200% 200%; animation: gradientMove 12s ease infinite;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 0%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: 0% 0%; }
+    }
+    .hero h1 { font-size: 2.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .hero p { font-size: 1.2rem; opacity: 0.85; max-width: 600px; margin-bottom: 2rem; }
+    /* Sections */
+    section { padding: 4rem 0; }
+    .section-title { font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 2rem; }
+    .card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 1rem;
+      padding: 2rem;
+      text-align: center;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,.2); }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+    /* FAQ */
+    .faq-item { margin-bottom: 1.5rem; }
+    .faq-question { font-weight: 600; cursor: pointer; position: relative; padding-right: 20px; }
+    .faq-question::after { content: '+'; position: absolute; right: 0; transition: transform .2s; }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+    .faq-item.active .faq-answer { max-height: 200px; }
+    .faq-item.active .faq-question::after { transform: rotate(45deg); }
+    /* Footer */
+    footer { background: rgba(11,15,25,0.9); padding: 2rem 0; text-align: center; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="container nav-inner">
+      <div class="logo" style="font-size:1.5rem;font-weight:700;color:var(--accent-violet);">Posterly</div>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#templates">Templates</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="#login">Login</a>
+      </div>
+      <a href="#start" class="btn-primary">Start Creating</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <h1>Turn One Poster Into Hundreds of Personalized Marketing Creatives.</h1>
+    <p>Upload your brand’s base poster, let our AI redesign it for every occasion, and generate 1000s of custom variants in seconds.</p>
+    <a href="#start" class="btn-primary">Get Started</a>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="container">
+    <h2 class="section-title">How It Works</h2>
+    <div class="grid-3">
+      <div class="card glass">
+        <h3>1. Upload Base Poster</h3>
+        <p>Drag‑and‑drop your original marketing poster (PNG, JPG, PDF).</p>
+      </div>
+      <div class="card glass">
+        <h3>2. AI‑Driven Redesign</h3>
+        <p>Our model analyses trends, festivals, and industry events to auto‑style the poster.</p>
+      </div>
+      <div class="card glass">
+        <h3>3. Personalize at Scale</h3>
+        <p>Upload a CSV/Excel of names & phone numbers – generate a unique poster for each row.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="container">
+    <h2 class="section-title">Key Features</h2>
+    <div class="grid-3">
+      <div class="card glass">
+        <h3>Trend‑Aware AI</h3>
+        <p>Real‑time design trends, seasonal colors, and event‑specific visuals.</p>
+      </div>
+      <div class="card glass">
+        <h3>Bulk Personalization</h3>
+        <p>Generate thousands of unique posters with a single CSV upload.</p>
+      </div>
+      <div class="card glass">
+        <h3>4K Export</h3>
+        <p>Download high‑resolution assets ready for print or digital campaigns.</p>
+      </div>
+      <div class="card glass">
+        <h3>Brand Guardrails</h3>
+        <p>Maintain brand consistency with color palettes, fonts, and logo placement.</p>
+      </div>
+      <div class="card glass">
+        <h3>Secure & Scalable</h3>
+        <p>Built on FastAPI + Next.js, auto‑scales with serverless functions.</p>
+      </div>
+      <div class="card glass">
+        <h3>Instant Preview</h3>
+        <p>Live preview while tweaking layout, fonts, or colors.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Templates -->
+  <section id="templates" class="container">
+    <h2 class="section-title">Ready‑Made Templates</h2>
+    <p style="text-align:center;max-width:800px;margin:auto;opacity:0.85;">Choose from curated designs for festivals, product launches, sales promotions, and more. Every template is fully editable.</p>
+    <div class="grid-3" style="margin-top:2rem;">
+      <div class="card glass"><strong>Festival Blast</strong><br/>Vibrant colors for Diwali, Ramadan, etc.</div>
+      <div class="card glass"><strong>Product Launch</strong><br/>Sleek layout for new releases.</div>
+      <div class="card glass"><strong>Seasonal Sale</strong><br/>Bold offers and countdown timers.</div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="container">
+    <h2 class="section-title">Pricing</h2>
+    <div class="grid-3" style="margin-top:2rem;">
+      <div class="card glass">
+        <h3>Free</h3>
+        <p>Up to 50 personalized posters per month.</p>
+        <p><strong>$0</strong>/mo</p>
+        <a href="#start" class="btn-primary">Start for Free</a>
+      </div>
+      <div class="card glass">
+        <h3>Pro</h3>
+        <p>Unlimited posters, premium templates, priority support.</p>
+        <p><strong>$49</strong>/mo</p>
+        <a href="#start" class="btn-primary">Go Pro</a>
+      </div>
+      <div class="card glass">
+        <h3>Enterprise</h3>
+        <p>Custom SLAs, on‑premise deployment, dedicated account manager.</p>
+        <p><strong>Contact Us</strong></p>
+        <a href="#contact" class="btn-primary">Get Quote</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="container">
+    <h2 class="section-title">Frequently Asked Questions</h2>
+    <div class="faq-item">
+      <div class="faq-question">How does the AI redesign work?</div>
+      <div class="faq-answer"><p>We use a diffusion‑based model fine‑tuned on millions of marketing creatives. It analyses the source poster and suggested themes before generating alternatives.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">Can I keep my brand colors?</div>
+      <div class="faq-answer"><p>Yes. Upload a brand‑guideline JSON and the engine will respect your palettes, fonts, and logo placement.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">What file formats are supported?</div>
+      <div class="faq-answer"><p>Upload PNG, JPEG, PDF for the base poster. Export options include PNG, JPEG, PDF, and 4K WebP.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">Is my data safe?</div>
+      <div class="faq-answer"><p>All uploads are encrypted at rest and processed in isolated containers. We comply with GDPR & CCPA.</p></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Posterly. All rights reserved.</p>
+      <p>Made with ❤️ using AI, React, and FastAPI.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Simple accordion for FAQ
+    document.querySelectorAll('.faq-question').forEach(q => {
+      q.addEventListener('click', () => {
+        const item = q.parentElement;
+        item.classList.toggle('active');
+      });
+    });
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
