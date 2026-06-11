@@ -1,0 +1,114 @@
+{
+  "template": {
+    "filename": "IMG-20260610-WA0004.jpg",
+    "filepath": "db/uploads/990b5d5ff30a4c1ea9a6eaec6a1aa877_IMG-20260610-WA0004.jpg",
+    "width": 853,
+    "height": 1280,
+    "mode": "RGB"
+  },
+  "contacts": {
+    "filename": "test_contacts.csv",
+    "filepath": "db/contacts/ad3ab4a512864703a09e5fd4ca2173fc_test_contacts.csv",
+    "count": 20,
+    "data": [
+      {
+        "name": "Amit Sharma",
+        "phone": "9876543210"
+      },
+      {
+        "name": "Priya Verma",
+        "phone": "9123456789"
+      },
+      {
+        "name": "Rahul Gupta",
+        "phone": "9988776655"
+      },
+      {
+        "name": "Sneha Patel",
+        "phone": "9871234567"
+      },
+      {
+        "name": "Vikram Singh",
+        "phone": "9765432109"
+      },
+      {
+        "name": "Anjali Mehta",
+        "phone": "9654321098"
+      },
+      {
+        "name": "Rohan Joshi",
+        "phone": "9543210987"
+      },
+      {
+        "name": "Deepika Nair",
+        "phone": "9432109876"
+      },
+      {
+        "name": "Arjun Reddy",
+        "phone": "9321098765"
+      },
+      {
+        "name": "Kavya Iyer",
+        "phone": "9210987654"
+      },
+      {
+        "name": "Suresh Kumar",
+        "phone": "9109876543"
+      },
+      {
+        "name": "Pooja Agarwal",
+        "phone": "9098765432"
+      },
+      {
+        "name": "Manish Tiwari",
+        "phone": "9987654321"
+      },
+      {
+        "name": "Nisha Bhat",
+        "phone": "9876541230"
+      },
+      {
+        "name": "Arun Pillai",
+        "phone": "9765430129"
+      },
+      {
+        "name": "Swati Desai",
+        "phone": "9654329018"
+      },
+      {
+        "name": "Kartik Malhotra",
+        "phone": "9543218907"
+      },
+      {
+        "name": "Divya Choudhary",
+        "phone": "9432107896"
+      },
+      {
+        "name": "Nikhil Saxena",
+        "phone": "9321096785"
+      },
+      {
+        "name": "Rekha Bansal",
+        "phone": "9210985674"
+      }
+    ]
+  },
+  "name_field": {
+    "x": 0.1365767878077374,
+    "y": 0.882373046875,
+    "font_size": 30,
+    "color": "#50e619",
+    "bold": true,
+    "align": "left",
+    "shadow": true
+  },
+  "phone_field": {
+    "x": 0.6008206330597889,
+    "y": 0.876904296875,
+    "font_size": 29,
+    "color": "#07e95e",
+    "bold": false,
+    "align": "left",
+    "shadow": true
+  }
+}
