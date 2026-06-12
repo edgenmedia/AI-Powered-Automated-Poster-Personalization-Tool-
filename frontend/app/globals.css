@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* ==========================
+   Root Theme Variables
+========================== */
+
+:root {
+  --background: #f8fafc;
+  --foreground: #111827;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+
+  --secondary: #7c3aed;
+
+  --card: #ffffff;
+  --border: #e5e7eb;
+
+  --success: #10b981;
+  --danger: #ef4444;
+}
+
+/* ==========================
+   Base Styles
+========================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #eef2ff 50%,
+      #f5f3ff 100%
+    );
+
+  color: var(--foreground);
+
+  font-family:
+    Inter,
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  min-height: 100vh;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================
+   Selection
+========================== */
+
+::selection {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+/* ==========================
+   Scrollbar
+========================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.7);
+}
+
+/* Firefox */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color:
+    rgba(99, 102, 241, 0.5)
+    transparent;
+}
+
+/* ==========================
+   Buttons
+========================== */
+
+button {
+  cursor: pointer;
+
+  transition:
+    all 0.25s ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ==========================
+   Inputs
+========================== */
+
+input,
+select,
+textarea {
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* ==========================
+   File Inputs
+========================== */
+
+input[type="file"] {
+  cursor: pointer;
+}
+
+/* ==========================
+   Images
+========================== */
+
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ==========================
+   Cards
+========================== */
+
+.poster-card {
+  background: white;
+
+  border-radius: 2rem;
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.06);
+
+  transition: all 0.3s ease;
+}
+
+.poster-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================
+   Upload Area
+========================== */
+
+.upload-zone {
+  border: 2px dashed #818cf8;
+
+  border-radius: 2rem;
+
+  transition: all 0.3s ease;
+}
+
+.upload-zone:hover {
+  border-color: #6366f1;
+
+  background: rgba(99, 102, 241, 0.03);
+}
+
+/* ==========================
+   Gradient Text
+========================== */
+
+.gradient-text {
+  background:
+    linear-gradient(
+      90deg,
+      #4f46e5,
+      #7c3aed
+    );
+
+  -webkit-background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+
+  background-clip: text;
+}
+
+/* ==========================
+   Stepper Animation
+========================== */
+
+.step-active {
+  animation: pulseStep 1.5s infinite;
+}
+
+@keyframes pulseStep {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==========================
+   Fade In Animation
+========================== */
+
+.fade-in {
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================
+   Generate Progress
+========================== */
+
+.progress-glow {
+  box-shadow:
+    0 0 20px rgba(99, 102, 241, 0.35);
+}
+
+/* ==========================
+   Template Editor Handles
+========================== */
+
+.react-draggable {
+  transition: box-shadow 0.2s ease;
+}
+
+.react-draggable:hover {
+  box-shadow:
+    0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
+/* ==========================
+   Responsive
+========================== */
+
+@media (max-width: 768px) {
+
+  body {
+    font-size: 15px;
+  }
+
+  .poster-card {
+    border-radius: 1.5rem;
+  }
+
+}

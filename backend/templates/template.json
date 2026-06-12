@@ -1,0 +1,26 @@
+{
+    "name_region": {
+        "x": 132,
+        "y": 1355,
+        "w": 304,
+        "h": 34
+    },
+    "phone_region": {
+        "x": 615,
+        "y": 1355,
+        "w": 338,
+        "h": 33
+    },
+    "name_style": {
+        "font": "Poppins",
+        "size": 23,
+        "color": "#0d0c0c",
+        "weight": "bold"
+    },
+    "phone_style": {
+        "font": "Roboto",
+        "size": 14,
+        "color": "#0f0f0f",
+        "weight": "normal"
+    }
+}
