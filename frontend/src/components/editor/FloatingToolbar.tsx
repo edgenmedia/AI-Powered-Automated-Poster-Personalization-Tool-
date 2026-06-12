@@ -122,7 +122,7 @@ export default function FloatingToolbar() {
     <header className="w-full h-16 border-b border-white/10 bg-[#111827] px-4 md:px-6 flex items-center justify-between z-40 shrink-0 select-none">
       {/* Left: Branding */}
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-md shadow-violet-500/20" />
+        <img src="/icon.png" alt="Posterly Logo" className="h-13 w-13 object-contain rounded-xl shadow-md shadow-violet-500/10" />
         <span className="font-black text-sm tracking-wide text-white">Posterly Studio</span>
       </div>
 
