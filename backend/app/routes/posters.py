@@ -15,6 +15,8 @@ from PIL import Image, ImageDraw
 from app.models import FieldMapping
 from app.utils.data_utils import parse_file_to_dataframe, validate_data, get_safe_filename
 from app.utils.image_utils import draw_personalized_text
+from app.utils.ai_utils import compile_prompt, call_openai_image_edit
+import uuid
 
 router = APIRouter(prefix="/api")
 
@@ -415,3 +417,177 @@ async def ai_suggest(request: AISuggestRequest):
     ]
     
     return {"suggestions": suggestions}
+
+@router.post("/preview-prompt")
+async def preview_prompt(
+    poster: UploadFile = File(...),
+    user_campaign_input: Optional[str] = Form(None)
+):
+    print("------------------------------------------")
+    print("PREVIEW PROMPT ENDPOINT CALLED")
+    print(f"user_campaign_input received: {repr(user_campaign_input)}")
+    try:
+        final_prompt = compile_prompt(user_campaign_input)
+        print(f"Compiled prompt length: {len(final_prompt)}")
+        print(f"Compiled prompt starts with: {repr(final_prompt[:150])}")
+        return {"success": True, "final_image_prompt": final_prompt}
+    except Exception as e:
+        print(f"ERROR IN PREVIEW PROMPT: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-poster")
+async def generate_poster_redesign(
+    poster: UploadFile = File(...),
+    user_campaign_input: Optional[str] = Form(None),
+    custom_prompt: Optional[str] = Form(None)
+):
+    print("------------------------------------------")
+    print("GENERATE POSTER REDESIGN ENDPOINT CALLED")
+    print(f"user_campaign_input received: {repr(user_campaign_input)}")
+    print(f"custom_prompt received: {repr(custom_prompt[:100] if custom_prompt else None)}")
+    try:
+        # Determine the prompt
+        if custom_prompt and custom_prompt.strip():
+            prompt = custom_prompt
+        else:
+            prompt = compile_prompt(user_campaign_input)
+
+        # Read image bytes
+        image_bytes = await poster.read()
+
+        # Call OpenAI Image API
+        redesigned_bytes = call_openai_image_edit(image_bytes, prompt)
+
+        # Save to static/generated folder
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+        generated_dir = os.path.join(static_dir, "generated")
+        os.makedirs(generated_dir, exist_ok=True)
+
+        filename = f"redesign_{uuid.uuid4().hex}.png"
+        filepath = os.path.join(generated_dir, filename)
+
+        with open(filepath, "wb") as f:
+            f.write(redesigned_bytes)
+
+        poster_url = f"/static/generated/{filename}"
+        return {"success": True, "poster_url": poster_url}
+    except Exception as e:
+        print(f"OpenAI Generation failed: {str(e)}. Falling back to default fallback image.")
+        static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+        os.makedirs(static_dir, exist_ok=True)
+        
+        # Try to find default-gen.jpg, deafult-gen.jpg or default.jpg in frontend public folder
+        frontend_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
+            "frontend", "public"
+        )
+        
+        frontend_source = None
+        for name in ["default-gen.jpg", "deafult-gen.jpg", "default.jpg"]:
+            source_path = os.path.join(frontend_dir, name)
+            if os.path.exists(source_path):
+                frontend_source = source_path
+                break
+        
+        if frontend_source:
+            for name in ["default-gen.jpg", "deafult-gen.jpg"]:
+                filepath = os.path.join(static_dir, name)
+                try:
+                    shutil.copy(frontend_source, filepath)
+                    print(f"Successfully copied fallback image from {frontend_source} to {filepath}")
+                except Exception as copy_err:
+                    print(f"Failed to copy fallback image to {filepath}: {copy_err}")
+        
+        # Prioritize default-gen.jpg, fallback to deafult-gen.jpg
+        fallback_name = "default-gen.jpg"
+        if os.path.exists(os.path.join(static_dir, "default-gen.jpg")):
+            fallback_name = "default-gen.jpg"
+        elif os.path.exists(os.path.join(static_dir, "deafult-gen.jpg")):
+            fallback_name = "deafult-gen.jpg"
+            
+        poster_url = f"/static/{fallback_name}"
+        return {"success": True, "poster_url": poster_url}
+
+@router.post("/poster/generate-image")
+async def generate_image_v2(
+    image: UploadFile = File(...),
+    finalPrompt: str = Form(...),
+    size: str = Form("1024x1536")
+):
+    # Validate image format
+    if not image or not image.filename:
+        raise HTTPException(status_code=400, detail="Image file is required.")
+        
+    ext = image.filename.split('.')[-1].lower() if '.' in image.filename else ''
+    if ext != 'png':
+        raise HTTPException(status_code=400, detail="Only PNG images are supported.")
+        
+    # Validate finalPrompt is not empty
+    if not finalPrompt or not finalPrompt.strip():
+        raise HTTPException(status_code=400, detail="finalPrompt cannot be empty.")
+        
+    try:
+        image_bytes = await image.read()
+        
+        # Call OpenAI Image edit service
+        redesigned_bytes = call_openai_image_edit(
+            image_bytes=image_bytes,
+            final_prompt=finalPrompt
+        )
+        
+        # Save generated image to uploads/generated
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        uploads_gen_dir = os.path.join(backend_dir, "uploads", "generated")
+        os.makedirs(uploads_gen_dir, exist_ok=True)
+        
+        filename = f"redesign_{uuid.uuid4().hex}.png"
+        filepath = os.path.join(uploads_gen_dir, filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(redesigned_bytes)
+            
+        return {
+            "success": True,
+            "imageUrl": f"/uploads/generated/{filename}",
+            "revisedPrompt": None
+        }
+    except requests.HTTPError as http_err:
+        response = http_err.response
+        status_code = response.status_code
+        # Log technical error only on backend
+        print(f"OpenAI API Error (Status {status_code}): {response.text}")
+        
+        try:
+            error_json = response.json()
+            error_detail = error_json.get("error", {})
+            error_message = error_detail.get("message", "")
+            error_code = error_detail.get("code", "")
+        except Exception:
+            error_message = response.text
+            error_code = ""
+            
+        # Moderation / Safety Check
+        if status_code == 400 and ("safety" in error_message.lower() or "policy" in error_message.lower() or error_code == "content_policy_violation"):
+            return {
+                "success": False,
+                "message": "This image request could not be processed due to safety rules. Please revise the prompt."
+            }
+            
+        # Quota / Rate-limit Check
+        if status_code == 429:
+            return {
+                "success": False,
+                "message": "OpenAI API quota exceeded or rate limit reached. Please try again later."
+            }
+            
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate redesigned poster due to an OpenAI API error."
+        )
+    except Exception as e:
+        # Log technical error only on backend
+        print(f"Technical Error in generate_image endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate redesigned poster due to an internal server error."
+        )

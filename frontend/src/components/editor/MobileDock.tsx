@@ -16,8 +16,12 @@ import {
   Bold, 
   Trash2, 
   Pipette, 
-  Wand2 
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  Search
 } from "lucide-react";
+import { CAMPAIGN_CATEGORIES } from "@/constants/campaigns";
 
 type TabType = "uploads" | "fields" | "ai" | "edit";
 
@@ -42,22 +46,48 @@ export default function MobileDock() {
     updateActiveRowValue,
     isParsingCSV,
     isDetecting,
-    isGeneratingAI,
-    generateAISuggestions,
-    aiSuggestions,
-    applyAISuggestions,
     placingColumn,
     setPlacingColumn,
     rowEdits,
+    isGeneratingAIPoster,
+    generateAIPoster,
+    generatePromptPreview,
+    previewedPrompt,
+    setPreviewedPrompt,
+    isPreviewingPrompt
   } = useEditor();
 
   const [activeTab, setActiveTab] = useState<TabType | null>(null);
   const [isValidationOpen, setIsValidationOpen] = useState(false);
 
-  // AI Agent States
-  const [occasion, setOccasion] = useState("Auto Today");
-  const [tone, setTone] = useState("Premium");
-  const [instruction, setInstruction] = useState("");
+  // Redesign Input State
+  const [campaignInput, setCampaignInput] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Dropdown & Search State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const toggleCategory = (catName: string) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [catName]: !prev[catName],
+    }));
+  };
+
+  const filteredCategories = CAMPAIGN_CATEGORIES.map((cat) => {
+    const filtered = cat.campaigns.filter(
+      (camp) =>
+        camp.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        camp.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cat.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    return {
+      ...cat,
+      campaigns: filtered,
+    };
+  }).filter((cat) => cat.campaigns.length > 0);
 
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
   const [selectedFont, setSelectedFont] = useState(selectedLayer?.fontFamily || "Inter");
@@ -83,7 +113,13 @@ export default function MobileDock() {
     updateLayer(selectedLayer.id, { fontFamily: newFont });
   };
 
-  const supportsEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
+  const [supportsEyeDropper, setSupportsEyeDropper] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "EyeDropper" in window) {
+      setSupportsEyeDropper(true);
+    }
+  }, []);
 
   // Auto-switch to "edit" tab when a text layer is selected on canvas
   useEffect(() => {
@@ -95,6 +131,11 @@ export default function MobileDock() {
   const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+      alert("Only PNG images are allowed on the canvas.");
+      e.target.value = "";
+      return;
+    }
     setPosterFile(file);
   };
 
@@ -122,6 +163,7 @@ export default function MobileDock() {
 
   const handlePickColor = async () => {
     if (!supportsEyeDropper || !selectedLayerId) return;
+    setActiveTab(null); // Temporarily close the drawer so they can see the poster clearly
     try {
       const eyeDropper = new (window as any).EyeDropper();
       const result = await eyeDropper.open();
@@ -131,35 +173,26 @@ export default function MobileDock() {
     }
   };
 
-  const handleGenerate = () => {
-    generateAISuggestions(occasion, tone, instruction);
-  };
-
-  const handleApply = () => {
-    applyAISuggestions(aiSuggestions);
-  };
-
-  const makeItPremium = () => {
-    if (layers.length === 0) {
-      alert("Please map some text layers first!");
+  const handlePreviewSubmit = () => {
+    if (!posterFile) {
+      alert("Please upload a base poster first in the Uploads tab!");
       return;
     }
-    if (selectedLayerId) {
-      updateLayer(selectedLayerId, {
-        fontFamily: "Playfair Display",
-        fontWeight: "bold",
-        fontColor: "#FBBF24",
-      });
-    } else {
-      const updated = layers.map((layer) => {
-        const lowerCol = layer.column.toLowerCase();
-        if (lowerCol.includes("heading") || lowerCol.includes("title") || lowerCol.includes("name")) {
-          return { ...layer, fontFamily: "Montserrat", fontWeight: "bold" as const, fontColor: "#FFFFFF" };
-        }
-        return { ...layer, fontFamily: "Inter", fontColor: "#67e8f9" };
-      });
-      updateLayer(layers[0].id, updated[0]); // Simple bulk override
+    generatePromptPreview(posterFile, campaignInput);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(previewedPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleUseCustomPrompt = () => {
+    if (!posterFile) {
+      alert("Please upload a base poster first in the Uploads tab!");
+      return;
     }
+    generateAIPoster(posterFile, "", previewedPrompt);
   };
 
   const getCurrentTextValue = () => {
@@ -183,19 +216,20 @@ export default function MobileDock() {
   };
 
   return (
-    <div>
+    <div id="mobile-dock-container">
       {/* Backdrop Overlay when bottom sheet is active */}
       {activeTab && (
         <div 
           onClick={() => setActiveTab(null)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity" 
+          onTouchStart={() => setActiveTab(null)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity cursor-pointer" 
         />
       )}
 
       {/* Bottom Sheet Drawer */}
       <div 
         className={`fixed left-0 right-0 z-50 bg-[#111827] border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col transition-transform duration-300 ease-out ${
-          activeTab ? "translate-y-0" : "translate-y-full"
+          activeTab ? "translate-y-0 pointer-events-auto" : "translate-y-full pointer-events-none"
         }`}
         style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
       >
@@ -226,44 +260,93 @@ export default function MobileDock() {
           {/* UPLOADS PANEL */}
           {activeTab === "uploads" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className={`rounded-xl border p-4 transition-all ${
+                posterFile 
+                  ? "border-emerald-500/20 bg-emerald-500/[0.02]" 
+                  : "border-white/5 bg-white/[0.02]"
+              }`}>
                 <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">Base Poster</h3>
-                <label className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-4 cursor-pointer hover:bg-white/5 transition text-center">
-                  <Upload className="w-5 h-5 text-white/30 mb-1" />
-                  <span className="text-xs text-white/70 truncate max-w-[200px]">
+                <label className={`flex flex-col items-center justify-center border border-dashed rounded-xl p-4 cursor-pointer transition text-center ${
+                  posterFile 
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-semibold" 
+                    : "border-white/10 hover:bg-white/5 text-white/70"
+                }`}>
+                  <Upload className={`w-5 h-5 mb-1 ${posterFile ? "text-emerald-400" : "text-white/30"}`} />
+                  <span className="text-xs truncate max-w-[200px]">
                     {posterFile ? posterFile.name : "Select Image Template"}
                   </span>
-                  <input type="file" accept="image/*" onChange={handlePosterUpload} className="hidden" />
+                  <input type="file" accept="image/png" onChange={handlePosterUpload} className="hidden" />
                 </label>
+                {posterFile && posterDimensions.width > 0 && (
+                  <p className="mt-2 text-[9px] text-emerald-400/80 font-semibold flex items-center gap-1 justify-center">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Loaded: {posterDimensions.width} × {posterDimensions.height} px</span>
+                  </p>
+                )}
               </div>
 
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+              <div className={`rounded-xl border p-4 transition-all ${
+                csvFile 
+                  ? "border-emerald-500/20 bg-emerald-500/[0.02]" 
+                  : "border-white/5 bg-white/[0.02]"
+              }`}>
                 <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">Spreadsheet Data</h3>
-                <label className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-4 cursor-pointer hover:bg-white/5 transition text-center">
+                <label className={`flex flex-col items-center justify-center border border-dashed rounded-xl p-4 cursor-pointer transition text-center ${
+                  csvFile 
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-semibold" 
+                    : "border-white/10 hover:bg-white/5 text-white/70"
+                }`}>
                   {isParsingCSV ? (
                     <Loader2 className="w-5 h-5 text-violet-400 animate-spin mb-1" />
                   ) : (
-                    <Upload className="w-5 h-5 text-white/30 mb-1" />
+                    <Upload className={`w-5 h-5 mb-1 ${csvFile ? "text-emerald-400" : "text-white/30"}`} />
                   )}
-                  <span className="text-xs text-white/70 truncate max-w-[200px]">
+                  <span className="text-xs truncate max-w-[200px]">
                     {csvFile ? csvFile.name : "Select CSV / Excel"}
                   </span>
                   <input type="file" accept=".csv,.xlsx,.xls" onChange={handleCSVUpload} className="hidden" disabled={isParsingCSV} />
                 </label>
+                {totalCSVRows > 0 && (
+                  <p className="mt-2 text-[9px] text-emerald-400/80 font-semibold flex items-center gap-1 justify-center">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Parsed {totalCSVRows} rows successfully</span>
+                  </p>
+                )}
               </div>
 
               {csvValidation && (
                 <div className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden">
                   <button 
                     onClick={() => setIsValidationOpen(!isValidationOpen)}
-                    className="w-full flex items-center justify-between p-3 text-left bg-black/10"
+                    className="w-full flex items-center justify-between p-3 text-left bg-black/10 text-white"
                   >
                     <span className="font-semibold text-white/50 uppercase tracking-wider">Spreadsheet Diagnostics</span>
                     <span className="text-[10px] text-white/30">{isValidationOpen ? "Hide" : "Show"}</span>
                   </button>
                   {isValidationOpen && (
-                    <div className="p-3 bg-black/20 space-y-2">
-                      <p className="text-emerald-400">✓ Validation details checked</p>
+                    <div className="p-4 bg-black/20 space-y-3">
+                      <div>
+                        <h4 className="text-[10px] font-semibold text-white/60 mb-2">Missing Values:</h4>
+                        {Object.keys(csvValidation.empty_counts).length > 0 ? (
+                          <ul className="space-y-2">
+                            {Object.entries(csvValidation.empty_counts).map(([col, valInfo]: any) => (
+                              <li key={col} className="rounded overflow-hidden bg-black/20 p-2.5 border border-white/5 text-left">
+                                <div className="flex justify-between text-yellow-300 font-semibold">
+                                  <span>{col}</span>
+                                  <span>{valInfo.count} empty</span>
+                                </div>
+                                {valInfo.count > 0 && (
+                                  <p className="text-[9px] text-white/40 mt-1">
+                                    Image numbers: {valInfo.empty_rows.map((r: number) => r + 1).join(", ")}
+                                  </p>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-[10px] text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded text-center">✓ No missing values detected</p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -320,52 +403,192 @@ export default function MobileDock() {
               ) : (
                 <p className="text-center text-white/30 italic py-4">Upload a spreadsheet first to see columns</p>
               )}
+
+              {/* Spreadsheet diagnostics in Fields Panel */}
+              {csvValidation && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden mt-4">
+                  <button 
+                    onClick={() => setIsValidationOpen(!isValidationOpen)}
+                    className="w-full flex items-center justify-between p-3 text-left bg-black/10 text-white"
+                  >
+                    <span className="font-semibold text-white/50 uppercase tracking-wider">Spreadsheet Diagnostics</span>
+                    <span className="text-[10px] text-white/30">{isValidationOpen ? "Hide" : "Show"}</span>
+                  </button>
+                  {isValidationOpen && (
+                    <div className="p-4 bg-black/20 space-y-3">
+                      <div>
+                        <h4 className="text-[10px] font-semibold text-white/60 mb-2">Missing Values:</h4>
+                        {Object.keys(csvValidation.empty_counts).length > 0 ? (
+                          <ul className="space-y-2">
+                            {Object.entries(csvValidation.empty_counts).map(([col, valInfo]: any) => (
+                              <li key={col} className="rounded overflow-hidden bg-black/20 p-2.5 border border-white/5 text-left">
+                                <div className="flex justify-between text-yellow-300 font-semibold">
+                                  <span>{col}</span>
+                                  <span>{valInfo.count} empty</span>
+                                </div>
+                                {valInfo.count > 0 && (
+                                  <p className="text-[9px] text-white/40 mt-1">
+                                    Image numbers: {valInfo.empty_rows.map((r: number) => r + 1).join(", ")}
+                                  </p>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-[10px] text-emerald-400 bg-emerald-500/5 px-2 py-1 rounded text-center">✓ No missing values detected</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* AI AGENT PANEL */}
           {activeTab === "ai" && (
             <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">Occasion Mode</label>
-                <select value={occasion} onChange={(e) => setOccasion(e.target.value)} className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
-                  <option className="text-black bg-white" value="Auto Today">Auto Today</option>
-                  <option className="text-black bg-white" value="Festival">Festival Celebration</option>
-                  <option className="text-black bg-white" value="Trending News">Trending News</option>
-                  <option className="text-black bg-white" value="Custom">Custom Campaign</option>
-                </select>
-              </div>
+              {/* Campaign Templates Dropdown */}
+              <div className="relative">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
+                  Select Campaign Template
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="mt-1 w-full flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white outline-none hover:bg-white/10 focus:border-violet-500/50 transition duration-150 cursor-pointer"
+                >
+                  <span className="truncate text-white/70">
+                    Choose a campaign concept...
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-white/40 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              <div>
-                <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">Tone</label>
-                <select value={tone} onChange={(e) => setTone(e.target.value)} className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
-                  <option className="text-black bg-white" value="Premium">Premium / Executive</option>
-                  <option className="text-black bg-white" value="Hinglish">Hinglish (Colloquial)</option>
-                  <option className="text-black bg-white" value="Massy">Massy / Vibrant</option>
-                  <option className="text-black bg-white" value="Professional">Professional / Corporate</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">AI Instructions</label>
-                <textarea rows={2} value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="E.g. Discount offer on Holi..." className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white outline-none resize-none" />
-              </div>
-
-              <button onClick={handleGenerate} disabled={isGeneratingAI} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 font-bold text-white flex items-center justify-center gap-1.5 shadow">
-                {isGeneratingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                <span>Generate Magic</span>
-              </button>
-
-              {aiSuggestions.length > 0 && (
-                <div className="rounded-xl border border-violet-500/20 bg-violet-600/5 p-4 space-y-2">
-                  <h4 className="font-bold text-violet-300">Suggestions:</h4>
-                  {aiSuggestions.map((s) => (
-                    <div key={s.id} className="border-b border-white/5 pb-1 last:border-b-0">
-                      <p className="text-[9px] text-white/40 uppercase tracking-wider font-bold">{s.title}</p>
-                      <p className="italic text-white/80">"{s.text}"</p>
+                {isDropdownOpen && (
+                  <div className="mt-2 rounded-xl border border-white/10 bg-gray-900/95 backdrop-blur-md p-2 space-y-2 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent z-50">
+                    {/* Search Input */}
+                    <div className="relative flex items-center">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 text-white/40" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search templates..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-2.5 py-1.5 text-[11px] text-white outline-none placeholder:text-white/20 focus:border-violet-500/30"
+                      />
                     </div>
-                  ))}
-                  <button onClick={handleApply} className="w-full mt-2 py-2 rounded-xl bg-violet-600 font-bold text-white">Apply suggestion</button>
+
+                    {/* Categories / Campaigns List */}
+                    <div className="space-y-1">
+                      {filteredCategories.map((cat) => {
+                        const isExpanded = searchQuery ? true : !!expandedCategories[cat.category];
+                        return (
+                          <div key={cat.category} className="border-b border-white/5 last:border-0 pb-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleCategory(cat.category)}
+                              className="w-full flex items-center justify-between py-1.5 px-1 text-left text-[10.5px] font-bold text-violet-300 hover:text-violet-200 transition"
+                            >
+                              <span>{cat.category}</span>
+                              {!searchQuery && (
+                                <span>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-3 h-3 text-white/40" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3 text-white/40" />
+                                  )}
+                                </span>
+                              )}
+                            </button>
+
+                            {isExpanded && (
+                              <div className="mt-1 pl-1.5 pr-0.5 py-1 space-y-1">
+                                {cat.campaigns.map((camp) => (
+                                  <button
+                                    key={camp.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setCampaignInput(camp.value);
+                                      setIsDropdownOpen(false);
+                                      setSearchQuery("");
+                                    }}
+                                    className="w-full text-left text-[10.5px] text-white/70 hover:text-white hover:bg-white/5 rounded px-2 py-1.5 transition leading-snug cursor-pointer"
+                                  >
+                                    {camp.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {filteredCategories.length === 0 && (
+                        <p className="text-center text-white/30 text-[10px] py-4 italic">No campaigns found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Campaign Direction Input */}
+              <div>
+                <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">Campaign Direction (Customize)</label>
+                <textarea 
+                  rows={3} 
+                  value={campaignInput} 
+                  onChange={(e) => setCampaignInput(e.target.value)} 
+                  placeholder="Select a template above, or type custom campaign direction here..." 
+                  className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white outline-none resize-none" 
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={handlePreviewSubmit} 
+                  disabled={isPreviewingPrompt || isGeneratingAIPoster} 
+                  className="w-full py-2.5 rounded-xl border border-white/10 bg-white/5 text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
+                >
+                  {isPreviewingPrompt ? "Previewing..." : "Preview Prompt"}
+                </button>
+              </div>
+
+              {previewedPrompt && (
+                <div className="rounded-xl border border-violet-500/20 bg-violet-600/5 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[10px] text-violet-300 uppercase tracking-wider">Final Image Prompt</span>
+                    <button 
+                      onClick={handleCopy} 
+                      className="text-[9px] bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg px-2 py-0.5 text-white/70 cursor-pointer"
+                    >
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    value={previewedPrompt}
+                    onChange={(e) => setPreviewedPrompt(e.target.value)}
+                    className="w-full resize-y rounded-lg border border-white/10 bg-black/40 px-2 py-2.5 text-xs text-white outline-none leading-relaxed font-mono"
+                  />
+
+                  <button 
+                    onClick={handleUseCustomPrompt} 
+                    disabled={isGeneratingAIPoster} 
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 font-bold text-white text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                  >
+                    {isGeneratingAIPoster ? (
+                      <span>Generating...</span>
+                    ) : (
+                      <>
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span>Generate Redesign</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
@@ -442,12 +665,11 @@ export default function MobileDock() {
         </div>
       </div>
 
-      {/* Horizontally Scrollable Bottom Dock Tabs Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-white/10 z-40 shadow-lg flex flex-col">
-        <div className="h-16 px-4 flex items-center justify-start md:justify-center gap-2 overflow-x-auto scrollbar-thin">
+      <div className="fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-white/10 z-50 shadow-lg flex flex-col">
+        <div className="h-16 px-3 flex items-center justify-between gap-1 w-full">
           <button 
             onClick={() => setActiveTab(activeTab === "uploads" ? null : "uploads")}
-            className={`flex-1 min-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "uploads" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "uploads" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
           >
             <Upload className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">Uploads</span>
@@ -455,7 +677,7 @@ export default function MobileDock() {
 
           <button 
             onClick={() => setActiveTab(activeTab === "fields" ? null : "fields")}
-            className={`flex-1 min-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "fields" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "fields" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
           >
             <Layers className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">Fields</span>
@@ -463,7 +685,7 @@ export default function MobileDock() {
 
           <button 
             onClick={() => setActiveTab(activeTab === "ai" ? null : "ai")}
-            className={`flex-1 min-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "ai" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 rounded-xl transition ${activeTab === "ai" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"}`}
           >
             <Sparkles className="w-5 h-5" />
             <span className="text-[10px] mt-0.5 font-medium">AI Agent</span>
@@ -472,7 +694,7 @@ export default function MobileDock() {
           <button 
             onClick={() => setActiveTab(activeTab === "edit" ? null : "edit")}
             disabled={!selectedLayerId}
-            className={`flex-1 min-w-[85px] flex flex-col items-center justify-center py-1 rounded-xl transition disabled:opacity-30 disabled:pointer-events-none ${
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 rounded-xl transition disabled:opacity-30 disabled:pointer-events-none ${
               activeTab === "edit" ? "text-violet-400 bg-white/5" : "text-white/60 hover:text-white"
             }`}
           >

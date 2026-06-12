@@ -39,6 +39,11 @@ export default function UploadSidebar({ width }: { width?: number }) {
   const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+      alert("Only PNG images are allowed on the canvas.");
+      e.target.value = "";
+      return;
+    }
     setPosterFile(file);
   };
 
@@ -71,31 +76,39 @@ export default function UploadSidebar({ width }: { width?: number }) {
       style={{ width: width ?? 320 }}
     >
       <h2 className="mb-4 text-lg font-bold text-white flex items-center gap-2">
-        <Upload className="w-5 h-5 text-violet-400" />
+         <Upload className="w-5 h-5 text-violet-400" />
         <span>Campaign Uploads</span>
       </h2>
 
       <div className="flex-1 overflow-y-auto pr-1 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {/* Base Poster Template Upload */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition hover:border-white/10">
+        <div className={`rounded-2xl border p-4 transition-all ${
+          posterFile 
+            ? "border-emerald-500/20 bg-emerald-500/[0.02]" 
+            : "border-white/5 bg-white/[0.02] hover:border-white/10"
+        }`}>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">Base Poster</h3>
           
-          <label className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center">
-            <Upload className="w-6 h-6 text-white/30 mb-2" />
-            <span className="text-xs font-medium text-white/70">
+          <label className={`flex flex-col items-center justify-center border border-dashed rounded-xl p-4 cursor-pointer transition-all text-center ${
+            posterFile 
+              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-semibold" 
+              : "border-white/10 hover:bg-white/5 text-white/70"
+          }`}>
+            <Upload className={`w-6 h-6 mb-2 ${posterFile ? "text-emerald-400" : "text-white/30"}`} />
+            <span className="text-xs font-medium">
               {posterFile ? posterFile.name : "Select Image Template"}
             </span>
-            <span className="text-[10px] text-white/40 mt-1">PNG, JPG, JPEG (Max 10MB)</span>
+            <span className={`text-[10px] mt-1 ${posterFile ? "text-emerald-500/60" : "text-white/40"}`}>PNG ONLY (Max 10MB)</span>
             <input
               type="file"
-              accept="image/*"
+              accept="image/png"
               onChange={handlePosterUpload}
               className="hidden"
             />
           </label>
 
           {posterFile && posterDimensions.width > 0 && (
-            <p className="mt-2 text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+            <p className="mt-2 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
               <Check className="w-3.5 h-3.5" />
               <span>Loaded: {posterDimensions.width} × {posterDimensions.height} px</span>
             </p>
@@ -103,19 +116,27 @@ export default function UploadSidebar({ width }: { width?: number }) {
         </div>
 
         {/* CSV/Excel Data Upload */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition hover:border-white/10">
+        <div className={`rounded-2xl border p-4 transition-all ${
+          csvFile 
+            ? "border-emerald-500/20 bg-emerald-500/[0.02]" 
+            : "border-white/5 bg-white/[0.02] hover:border-white/10"
+        }`}>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/50">Spreadsheet Data</h3>
 
-          <label className="flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl p-4 cursor-pointer hover:bg-white/5 transition-all text-center">
+          <label className={`flex flex-col items-center justify-center border border-dashed rounded-xl p-4 cursor-pointer transition-all text-center ${
+            csvFile 
+              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400 font-semibold" 
+              : "border-white/10 hover:bg-white/5 text-white/70"
+          }`}>
             {isParsingCSV ? (
               <Loader2 className="w-6 h-6 text-violet-400 animate-spin mb-2" />
             ) : (
-              <FileText className="w-6 h-6 text-white/30 mb-2" />
+              <FileText className={`w-6 h-6 mb-2 ${csvFile ? "text-emerald-400" : "text-white/30"}`} />
             )}
-            <span className="text-xs font-medium text-white/70">
+            <span className="text-xs font-medium">
               {csvFile ? csvFile.name : "Select CSV / Excel"}
             </span>
-            <span className="text-[10px] text-white/40 mt-1">.csv, .xlsx, .xls</span>
+            <span className={`text-[10px] mt-1 ${csvFile ? "text-emerald-500/60" : "text-white/40"}`}>.csv, .xlsx, .xls</span>
             <input
               type="file"
               accept=".csv,.xlsx,.xls"
@@ -126,7 +147,7 @@ export default function UploadSidebar({ width }: { width?: number }) {
           </label>
 
           {totalCSVRows > 0 && (
-            <p className="mt-2 text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+            <p className="mt-2 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
               <Check className="w-3.5 h-3.5" />
               <span>Parsed {totalCSVRows} rows successfully</span>
             </p>

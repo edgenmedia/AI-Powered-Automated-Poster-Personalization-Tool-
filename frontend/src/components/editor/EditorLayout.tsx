@@ -18,18 +18,6 @@ export default function EditorLayout() {
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
 
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check mobile width dynamically
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
   // Resize handler for Left Sidebar
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -88,39 +76,35 @@ export default function EditorLayout() {
 
   return (
     <EditorProvider>
-      <main className={`w-full flex flex-col overflow-hidden bg-[#0B0F19] text-white ${
-        isMobile ? "h-[100dvh] pb-16" : "h-screen pb-0"
-      }`}>
+      <main className="w-full flex flex-col overflow-hidden bg-[#0B0F19] text-white h-[100dvh] pb-16 md:h-screen md:pb-0">
         {/* Fixed top Header Navbar */}
         <FloatingToolbar />
 
         {/* Editor Body Split */}
         <div className="flex-1 flex overflow-hidden relative">
-          {!isMobile && <UploadSidebar width={leftWidth} />}
+          <UploadSidebar width={leftWidth} />
           
           {/* Left Resizer Handle (desktop only) */}
-          {!isMobile && (
-            <div 
-              onMouseDown={() => setIsResizingLeft(true)}
-              className="w-1 hover:w-1.5 bg-white/10 hover:bg-violet-500 cursor-col-resize select-none transition-all duration-150 z-30 relative shrink-0"
-            />
-          )}
+          <div 
+            onMouseDown={() => setIsResizingLeft(true)}
+            className="hidden md:block w-1 hover:w-1.5 bg-white/10 hover:bg-violet-500 cursor-col-resize select-none transition-all duration-150 z-30 relative shrink-0"
+          />
 
           <CanvasArea />
 
           {/* Right Resizer Handle (desktop only) */}
-          {!isMobile && (
-            <div 
-              onMouseDown={() => setIsResizingRight(true)}
-              className="w-1 hover:w-1.5 bg-white/10 hover:bg-violet-500 cursor-col-resize select-none transition-all duration-150 z-30 relative shrink-0"
-            />
-          )}
+          <div 
+            onMouseDown={() => setIsResizingRight(true)}
+            className="hidden md:block w-1 hover:w-1.5 bg-white/10 hover:bg-violet-500 cursor-col-resize select-none transition-all duration-150 z-30 relative shrink-0"
+          />
 
-          {!isMobile && <AIAgentSidebar width={rightWidth} />}
+          <AIAgentSidebar width={rightWidth} />
         </div>
 
         {/* Mobile bottom dock and slide-up drawers */}
-        {isMobile && <MobileDock />}
+        <div className="block md:hidden">
+          <MobileDock />
+        </div>
       </main>
     </EditorProvider>
   );

@@ -54,7 +54,13 @@ export default function FloatingToolbar() {
     await Promise.race([loadPromise, timeoutPromise]);
     updateLayer(selectedLayer.id, { fontFamily: newFont });
   };
-  const supportsEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
+  const [supportsEyeDropper, setSupportsEyeDropper] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "EyeDropper" in window) {
+      setSupportsEyeDropper(true);
+    }
+  }, []);
 
   // Dynamically load Google Fonts stylesheet containing Canva-like fonts
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function FloatingToolbar() {
   };
 
   return (
-    <header className="w-full h-16 border-b border-white/10 bg-[#111827] px-6 flex items-center justify-between z-40 shrink-0 select-none">
+    <header className="w-full h-16 border-b border-white/10 bg-[#111827] px-4 md:px-6 flex items-center justify-between z-40 shrink-0 select-none">
       {/* Left: Branding */}
       <div className="flex items-center gap-3">
         <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-md shadow-violet-500/20" />
@@ -282,7 +288,7 @@ export default function FloatingToolbar() {
         <button
           onClick={handleExport}
           disabled={isExporting}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-violet-500/20 hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+          className="flex items-center gap-1.5 md:gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 px-3 py-1.5 md:px-4 md:py-2 text-[11px] md:text-xs font-semibold text-white shadow-lg shadow-violet-500/20 hover:scale-[1.02] active:scale-[0.98] transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
         >
           {isExporting ? (
             <>

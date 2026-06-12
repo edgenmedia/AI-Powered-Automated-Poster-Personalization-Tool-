@@ -21,10 +21,14 @@ export default function CanvasArea() {
 
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [stageDraggable, setStageDraggable] = useState(false);
+  const touchStateRef = useRef<{ lastDist: number; lastCenter: { x: number; y: number } | null }>({
+    lastDist: 0,
+    lastCenter: null,
+  });
   const [zoom, setZoom] = useState(1);
   const [zoomInput, setZoomInput] = useState("100%");
   const [showZoomDropdown, setShowZoomDropdown] = useState(false);
+  const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 500, height: 600 });
@@ -88,6 +92,49 @@ export default function CanvasArea() {
 
     loadFonts();
   }, [layers]);
+
+  // Deselect selected layer when clicking outside the stage and editing controls
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+
+      // 1. If clicking inside the stage container, let Konva's local handlers manage it
+      const stageContainer = stageRef.current?.container();
+      if (stageContainer && stageContainer.contains(target)) {
+        return;
+      }
+
+      // 2. Skip deselection if clicking any editing control or panel element
+      const isEditingControl =
+        target.closest("header") ||
+        target.closest("aside") ||
+        target.closest("input") ||
+        target.closest("select") ||
+        target.closest("option") ||
+        target.closest("button") ||
+        target.closest("textarea") ||
+        target.closest("label") ||
+        target.closest("#zoom-controls-container") ||
+        target.closest("#mobile-dock-container") ||
+        target.closest("[role='listbox']") ||
+        target.closest("[role='menu']") ||
+        target.closest("[role='dialog']") ||
+        target.closest(".cursor-col-resize");
+
+      if (!isEditingControl) {
+        setSelectedLayerId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener("touchstart", handleDocumentClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener("touchstart", handleDocumentClick);
+    };
+  }, [setSelectedLayerId]);
 
   // Fit poster template in the centered workspace
   let scale = 1;
@@ -284,12 +331,62 @@ export default function CanvasArea() {
     applyZoomFromInput(zoomInput);
   };
 
-  // Determine stage drag capability on mouse/touch down
-  const handleStageMouseDown = (e: any) => {
+  const handleTouchMove = (e: any) => {
     const stage = stageRef.current;
     if (!stage) return;
-    const isTargetStageOrBg = e.target === e.target.getStage() || e.target.name() === "background-image";
-    setStageDraggable(isTargetStageOrBg && !placingColumn);
+
+    const touches = e.evt.touches;
+    if (touches && touches.length === 2) {
+      // Pinch to zoom
+      e.evt.preventDefault();
+      
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+
+      const p1 = { x: touch1.clientX, y: touch1.clientY };
+      const p2 = { x: touch2.clientX, y: touch2.clientY };
+
+      const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+
+      if (touchStateRef.current.lastDist > 0) {
+        const oldScale = stage.scaleX();
+        const scaleFactor = dist / touchStateRef.current.lastDist;
+        let newScale = oldScale * scaleFactor;
+
+        // Limit zoom between 0.4x and 5.0x
+        newScale = Math.min(Math.max(newScale, 0.4), 5.0);
+
+        const stageBox = stage.container().getBoundingClientRect();
+        const clientCenterX = center.x - stageBox.left;
+        const clientCenterY = center.y - stageBox.top;
+
+        const mousePointTo = {
+          x: (clientCenterX - stage.x()) / oldScale,
+          y: (clientCenterY - stage.y()) / oldScale,
+        };
+
+        stage.scale({ x: newScale, y: newScale });
+
+        const newPos = {
+          x: clientCenterX - mousePointTo.x * newScale,
+          y: clientCenterY - mousePointTo.y * newScale,
+        };
+
+        stage.position(newPos);
+        stage.batchDraw();
+
+        setZoom(newScale);
+      }
+
+      touchStateRef.current.lastDist = dist;
+      touchStateRef.current.lastCenter = center;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStateRef.current.lastDist = 0;
+    touchStateRef.current.lastCenter = null;
   };
 
   // Pan Stage Drag Handling
@@ -459,9 +556,9 @@ export default function CanvasArea() {
           onClick={handleStageClick}
           onTap={handleStageClick}
           onWheel={handleWheel}
-          draggable={stageDraggable}
-          onMouseDown={handleStageMouseDown}
-          onTouchStart={handleStageMouseDown}
+          draggable={!placingColumn}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           onDragStart={handleStageDragStart}
           onDragEnd={() => {
             if (stageRef.current && !placingColumn) {
@@ -492,8 +589,8 @@ export default function CanvasArea() {
 
               return (
                 <Group key={layer.id}>
-                  {/* Bounding Box Outline (visible when NOT selected and NOT dragging) */}
-                  {!isSelected && !isDragging && (
+                  {/* Bounding Box Outline (visible when hovered but NOT selected and NOT dragging) */}
+                  {hoveredLayerId === layer.id && !isSelected && !isDragging && (
                     <Rect
                       x={basePosterX + layer.x * scale}
                       y={basePosterY + layer.y * scale}
@@ -538,6 +635,8 @@ export default function CanvasArea() {
                       e.cancelBubble = true;
                       setSelectedLayerId(layer.id);
                     }}
+                    onMouseEnter={() => setHoveredLayerId(layer.id)}
+                    onMouseLeave={() => setHoveredLayerId(null)}
                   />
                 </Group>
               );

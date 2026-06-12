@@ -3,6 +3,411 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import JSZip from "jszip";
 
+const MASTER_PROMPT = `You are a world-class luxury real-estate creative director, branding strategist, marketing psychologist, architectural visualization expert, luxury branding consultant, and high-conversion advertisement designer.
+
+The uploaded image is an existing real-estate poster.
+
+IMPORTANT
+
+Treat the uploaded poster ONLY as a source of:
+
+• Project information
+• Layout understanding
+• Township planning
+• Amenities
+• Approvals
+• Pricing
+• Contact details
+• Location details
+• Investment information
+
+Do NOT use the uploaded poster as a visual design reference.
+
+Do NOT copy:
+
+• Colors
+• Layout
+• Typography
+• Composition
+• Icons
+• Decorative elements
+• Information arrangement
+• Brochure structure
+• CTA design
+• Visual hierarchy
+
+The final advertisement must be completely redesigned.
+
+──────────────────────────────
+
+USER CAMPAIGN INPUT
+
+{{USER_CAMPAIGN_INPUT}}
+
+──────────────────────────────
+
+CAMPAIGN OVERRIDE ENGINE
+
+The uploaded poster acts as the baseline project information source.
+
+Priority Order:
+
+1. USER_CAMPAIGN_INPUT
+2. Extracted Poster Information
+3. AI Generated Campaign Content
+
+Whenever USER_CAMPAIGN_INPUT contains updated information, treat it as the newest and most accurate information.
+
+This includes:
+
+• Pricing
+• Festival Pricing
+• Offer Pricing
+• EMI Information
+• Registration Offers
+• Booking Offers
+• Plot Availability
+• Scarcity Information
+• Contact Details
+• Address Information
+• Marketing Messages
+• Headlines
+• Taglines
+• CTA Messages
+• Offer Validity Dates
+
+If USER_CAMPAIGN_INPUT supplies both original price and offer price:
+
+Display both.
+
+Example:
+
+Original Price ₹1250/SQFT
+Festival Price ₹999/SQFT
+
+If USER_CAMPAIGN_INPUT only supplies offer pricing:
+
+Display only the supplied pricing.
+
+Do not invent original pricing.
+
+If USER_CAMPAIGN_INPUT does not specify a field:
+
+Preserve the extracted project information.
+
+──────────────────────────────
+
+PROJECT INFORMATION RULE
+
+Automatically identify and preserve all business-critical information including:
+
+• Builder Name
+• Project Name
+• Layout Name
+• Approval Information
+• Pricing
+• Amenities
+• Contact Details
+• Office Address
+• Location Information
+• Plot Details
+• Project Specifications
+• Investment Information
+• Sales Information
+• Legal Information
+• Customer Trust Information
+• Any other factual project information visible in the poster
+
+Preserve all factual information unless overridden by USER_CAMPAIGN_INPUT.
+
+Never invent project facts.
+
+──────────────────────────────
+
+CREATIVE CONCEPT EXPLORATION RULE
+
+Before designing the final advertisement, internally explore multiple campaign concepts.
+
+Potential concepts include:
+
+• Smart City Expansion
+• Infrastructure Growth
+• Future Appreciation
+• Wealth Creation
+• Family Legacy
+• Festival Prosperity
+• Premium Lifestyle
+• Investor Opportunity
+• Landmark Township
+• Community Living
+• Golden Opportunity
+• Future Ready Living
+
+Select the strongest concept.
+
+Only then create the final advertisement.
+
+Avoid generic brochure designs.
+
+The final output should feel like a premium advertising campaign rather than a property flyer.
+
+──────────────────────────────
+
+CAMPAIGN DEVELOPMENT RULE
+
+If USER_CAMPAIGN_INPUT is provided:
+
+Use it as the primary campaign direction.
+
+Convert it into:
+
+• Headline
+• Tagline
+• Emotional Story
+• Investment Narrative
+• Hero Visual
+• Visual Atmosphere
+• Buyer Psychology
+• Marketing Hook
+• Call To Action
+
+Build the entire advertisement around the campaign.
+
+The campaign should influence:
+
+• Environment
+• Lighting
+• Mood
+• Storytelling
+• Landscaping
+• Atmosphere
+• People
+• Branding
+• Visual Style
+
+Do not use the campaign merely as decoration.
+
+──────────────────────────────
+
+PROJECT VISUALIZATION RULE
+
+The uploaded poster represents a plotted-layout real-estate project.
+
+The plotted layout is one of the strongest selling points.
+
+It must remain clearly visible.
+
+The audience must immediately understand:
+
+• What is being sold
+• How the layout is planned
+• Where the roads are
+• Where the parks are
+• Where the amenities are
+• Why the investment is valuable
+
+Do not hide the layout behind decorative elements.
+
+Do not generate:
+
+• Gate-only advertisements
+• Entrance-only advertisements
+• Building-only advertisements
+
+──────────────────────────────
+
+SITE BOUNDARY ENFORCEMENT RULE
+
+The plotted layout represents a legally defined township.
+
+The project boundary must always be clearly visible.
+
+Display:
+
+• Complete compound wall
+• Defined perimeter
+• Security-controlled township edges
+• Boundary landscaping
+• Perimeter plantations
+• Township edge treatment
+
+All plots, roads, parks, amenities, and open spaces must remain completely inside the project boundary.
+
+The township must never visually merge into surrounding land.
+
+Roads must not extend beyond project boundaries.
+
+Plots must not blend into external terrain.
+
+The viewer must instantly understand:
+
+"This is a clearly defined approved plotted development."
+
+Avoid:
+
+• Floating plots
+• Open-ended roads
+• Missing boundaries
+• Township merging into farmland
+• Undefined project limits
+
+──────────────────────────────
+
+MASTERPLAN CLARITY RULE
+
+The township planning must be understandable within 3 seconds.
+
+Clearly display:
+
+• Plot divisions
+• Internal roads
+• Main boulevard
+• Entrance axis
+• Parks
+• Open spaces
+• Amenities
+• Compound walls
+• Township structure
+
+Avoid excessive visual effects that obscure layout visibility.
+
+──────────────────────────────
+
+HERO VISUAL RULE
+
+Preferred perspective:
+
+Premium drone camera view from above and slightly in front of the entrance.
+
+The image should show:
+
+• Grand entrance
+• Main roads
+• Plot layout
+• Parks
+• Amenities
+• Township planning
+• Development scale
+• Compound wall
+• Project boundary
+
+Visual balance:
+
+70% Layout Visibility
+
+20% Entrance Experience
+
+10% Campaign Storytelling
+
+The layout must remain the hero.
+
+──────────────────────────────
+
+FULL CANVAS DESIGN RULE
+
+Design the advertisement as a unified premium campaign.
+
+Do not default to:
+
+• White lower sections
+• White information panels
+• Generic brochure templates
+• Top-image bottom-text layouts
+
+The entire poster should feel like one integrated composition.
+
+Allow the campaign theme to influence:
+
+• Background
+• Colors
+• Typography
+• Information Cards
+• Decorative Elements
+• Atmosphere
+• Lighting
+
+Only use white backgrounds if the chosen campaign concept genuinely requires them.
+
+──────────────────────────────
+
+FESTIVAL INTEGRATION RULE
+
+If the campaign is based on a festival:
+
+Integrate the festival naturally into:
+
+• Entrance decorations
+• Landscaping
+• People
+• Atmosphere
+• Lighting
+• Township branding
+
+Do not simply place festival objects on top of the poster.
+
+The festival should influence the entire environment.
+
+──────────────────────────────
+
+DESIGN REQUIREMENTS
+
+Create:
+
+• Luxury real-estate branding
+• Strong visual hierarchy
+• Cinematic quality
+• Architectural visualization quality
+• Premium typography
+• Elegant information cards
+• Magazine-cover aesthetics
+• Social-media-ready composition
+• Premium brochure quality
+• High-conversion marketing design
+
+The final design should feel comparable to work produced by top international branding agencies.
+
+──────────────────────────────
+
+REALISM RULE
+
+Photorealistic architectural visualization.
+
+Drone photography realism.
+
+Ultra-realistic township rendering.
+
+Natural lighting.
+
+Premium landscape architecture.
+
+Professional real-estate marketing quality.
+
+Avoid:
+
+• Cartoon appearance
+• Unrealistic geometry
+• Distorted roads
+• Floating structures
+• Text corruption
+• Unrealistic layouts
+
+──────────────────────────────
+
+FINAL OBJECTIVE
+
+Create a completely new premium real-estate advertisement that preserves factual project information while reinventing all visual design.
+
+The final result should feel like an award-winning campaign from a top-tier international real-estate branding agency.
+
+The viewer should immediately feel:
+
+"I want to invest here."`;
+
+const compilePrompt = (userInput: string): string => {
+  const campaign = userInput && userInput.trim() ? userInput.trim() : "Create a luxury real-estate advertisement with premium aesthetic.";
+  return MASTER_PROMPT.replace(/\{\{USER_CAMPAIGN_INPUT\}\}/g, campaign).replace(/\{USER_CAMPAIGN_INPUT\}/g, campaign);
+};
+
 export interface TextLayer {
   id: string;
   column: string;
@@ -78,10 +483,16 @@ export interface EditorContextType {
   isDetecting: boolean;
   isExporting: boolean;
   isGeneratingAI: boolean;
+  isGeneratingAIPoster: boolean;
+  isPreviewingPrompt: boolean;
 
   // Actions
   autoDetectCoordinates: () => Promise<void>;
   exportPostersZip: () => Promise<void>;
+  generateAIPoster: (file: File, additionalInput: string, customPrompt?: string) => Promise<void>;
+  generatePromptPreview: (file: File, additionalInput: string) => Promise<void>;
+  previewedPrompt: string;
+  setPreviewedPrompt: (prompt: string) => void;
   generateAISuggestions: (
     occasion: string,
     tone: string,
@@ -244,6 +655,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [isDetecting, setIsDetecting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isGeneratingAIPoster, setIsGeneratingAIPoster] = useState(false);
+  const [isPreviewingPrompt, setIsPreviewingPrompt] = useState(false);
+  const [previewedPrompt, setPreviewedPrompt] = useState("");
 
   // AI suggestions list
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
@@ -253,6 +667,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   // Cleanup object URL on change
   const setPosterFile = (file: File | null) => {
+    if (file && file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+      alert("Only PNG files are allowed on the canvas.");
+      return;
+    }
     if (posterUrl) {
       URL.revokeObjectURL(posterUrl);
     }
@@ -272,6 +690,25 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setPosterDimensions({ width: 0, height: 0 });
     }
   };
+
+  // Load default poster from public folder on mount if exists
+  useEffect(() => {
+    const loadDefaultPoster = async () => {
+      try {
+        const res = await fetch("/default.png");
+        if (res.ok) {
+          const blob = await res.blob();
+          const file = new File([blob], "default.png", { type: "image/png" });
+          setPosterFile(file);
+          console.log("Loaded default poster from public: /default.png");
+        }
+      } catch (e) {
+        console.error("Failed to load default poster:", e);
+      }
+    };
+    loadDefaultPoster();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setCSVFile = (file: File | null) => {
     setCsvFile(file);
@@ -636,6 +1073,115 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const generateAIPoster = async (file: File, additionalInput: string, customPrompt?: string) => {
+    setIsGeneratingAIPoster(true);
+    try {
+      const isCustom = !!(customPrompt && customPrompt.trim());
+      const rawPrompt = isCustom ? customPrompt! : additionalInput;
+      if (!rawPrompt || !rawPrompt.trim()) {
+        throw new Error("Campaign direction prompt cannot be empty.");
+      }
+
+      const finalPrompt = isCustom ? rawPrompt.trim() : compilePrompt(rawPrompt);
+
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("finalPrompt", finalPrompt);
+      formData.append("size", "1024x1536");
+
+      const res = await fetch(`${API_BASE_URL}/api/poster/generate-image`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || errJson.detail || "Failed to generate AI poster");
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.imageUrl) {
+        throw new Error(data.message || "Invalid response from API");
+      }
+
+      // 1. Download/Fetch the generated image URL as a Blob
+      const fullUrl = data.imageUrl.startsWith("http")
+        ? data.imageUrl
+        : `${API_BASE_URL}${data.imageUrl}`;
+
+      const imgRes = await fetch(fullUrl);
+      const imgBlob = await imgRes.blob();
+      const generatedFile = new File([imgBlob], "generated_poster.png", { type: "image/png" });
+      
+      // 2. Set the generated file as the poster template
+      setPosterFile(generatedFile);
+
+      // 3. Automatically download the generated image
+      const downloadUrl = URL.createObjectURL(imgBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `redesigned_poster_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      alert("Premium AI real-estate poster generated successfully!");
+    } catch (err: any) {
+      console.error("Failed to generate AI poster:", err);
+      alert(`AI Poster Generation Error: ${err.message || err}. Falling back to default-gen.png.`);
+      
+      try {
+        const fallbackRes = await fetch("/default-gen.png");
+        if (fallbackRes.ok) {
+          const fallbackBlob = await fallbackRes.blob();
+          const fallbackFile = new File([fallbackBlob], "default-gen.png", { type: "image/png" });
+          setPosterFile(fallbackFile);
+          console.log("Fell back to default-gen.png on canvas.");
+        } else {
+          console.error("Failed to fetch /default-gen.png fallback image.");
+        }
+      } catch (fallbackErr) {
+        console.error("Error loading fallback default-gen.png:", fallbackErr);
+      }
+    } finally {
+      setIsGeneratingAIPoster(false);
+    }
+  };
+
+  const generatePromptPreview = async (file: File, additionalInput: string) => {
+    setIsPreviewingPrompt(true);
+    try {
+      const formData = new FormData();
+      formData.append("poster", file);
+      if (additionalInput.trim()) {
+        formData.append("user_campaign_input", additionalInput);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/preview-prompt`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || "Failed to generate prompt preview");
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.final_image_prompt) {
+        throw new Error("Invalid response from prompt preview API");
+      }
+
+      setPreviewedPrompt(data.final_image_prompt);
+    } catch (err: any) {
+      console.error("Failed to preview prompt:", err);
+      alert(`Prompt Preview Error: ${err.message || err}`);
+    } finally {
+      setIsPreviewingPrompt(false);
+    }
+  };
+
   const applyAISuggestions = (suggestions: AISuggestion[]) => {
     if (suggestions.length === 0) return;
 
@@ -730,10 +1276,16 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         isDetecting,
         isExporting,
         isGeneratingAI,
+        isGeneratingAIPoster,
+        isPreviewingPrompt,
 
         autoDetectCoordinates,
         exportPostersZip,
         generateAISuggestions,
+        generateAIPoster,
+        generatePromptPreview,
+        previewedPrompt,
+        setPreviewedPrompt,
         aiSuggestions,
         applyAISuggestions,
 
