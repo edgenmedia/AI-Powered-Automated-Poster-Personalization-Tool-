@@ -21,9 +21,15 @@ os.makedirs(UPLOADS_GENERATED_DIR, exist_ok=True)
 app = FastAPI(title="Posterly API", description="AI-powered poster personalization backend")
 
 # Configure CORS
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS")
+if not allowed_origins_raw:
+    raise RuntimeError("ALLOWED_ORIGINS environment variable is required and must be set.")
+
+origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict to frontend domain
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
