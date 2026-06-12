@@ -139,6 +139,41 @@
 </main>
 </div>
 
+<!-- Drive-style Preview Overlay -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-toolbar">
+    <div style="display:flex;align-items:center;overflow:hidden">
+      <span class="preview-filename" id="previewFilename"></span>
+      <span class="preview-counter" id="previewCounter"></span>
+    </div>
+    <div class="preview-actions">
+      <button class="preview-dl-btn" id="previewDownload" title="Download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+      <button class="preview-btn" id="previewClose" title="Close (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="preview-body" id="previewBody">
+    <button class="preview-nav prev" id="previewPrev" title="Previous (←)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="preview-img-wrap" id="previewImgWrap">
+      <img id="previewImg" alt="Preview">
+    </div>
+    <button class="preview-nav next" id="previewNext" title="Next (→)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+  <div class="preview-info">
+    <span><kbd>←</kbd> <kbd>→</kbd> Navigate</span>
+    <span><kbd>Esc</kbd> Close</span>
+    <span><kbd>D</kbd> Download</span>
+  </div>
+</div>
+
 <script src="/static/js/tool.js"></script>
 </body>
 </html>

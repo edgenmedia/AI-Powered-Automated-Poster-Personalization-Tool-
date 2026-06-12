@@ -285,7 +285,9 @@ async function generateAll() {
 
     const thumb = document.createElement('div');
     thumb.className = 'out-thumb';
-    thumb.innerHTML = `<a href="${url}" download="${esc(fname)}"><img src="${url}" alt="${esc(c.name)}" loading="lazy"></a><span>${esc(c.name)}</span>`;
+    thumb.dataset.index = i;
+    thumb.innerHTML = `<img src="${url}" alt="${esc(c.name)}" loading="lazy"><span>${esc(c.name)}</span>`;
+    thumb.addEventListener('click', () => openPreview(i));
     grid.appendChild(thumb);
 
     const pct = Math.round((i+1)/valid.length*100);
@@ -300,7 +302,7 @@ async function generateAll() {
     body: JSON.stringify({ images })
   }).catch(()=>{});
 
-  document.getElementById('progTxt').textContent = `✓ ${valid.length} posters ready — click any to download`;
+  document.getElementById('progTxt').textContent = `✓ ${valid.length} posters ready — click any to preview`;
   document.getElementById('zipBtn').style.display = '';
   document.getElementById('genBtn').disabled = false;
   document.getElementById('sn4').classList.add('done');
@@ -311,6 +313,84 @@ function downloadZip() { window.location.href = '/api/download-all'; }
 
 // ── Helpers ─────────────────────────────────────────────
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// ── Preview Overlay (Drive-style) ───────────────────────
+let previewIndex = -1;
+
+function openPreview(index) {
+  if (!generatedBlobs.length) return;
+  previewIndex = index;
+  const overlay = document.getElementById('previewOverlay');
+  showPreviewAt(index);
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  previewIndex = -1;
+}
+
+function showPreviewAt(index) {
+  const item = generatedBlobs[index];
+  if (!item) return;
+  const imgEl = document.getElementById('previewImg');
+  imgEl.src = URL.createObjectURL(item.blob);
+  document.getElementById('previewFilename').textContent = item.name.replace('.jpg', '');
+  document.getElementById('previewCounter').textContent = `${index + 1} of ${generatedBlobs.length}`;
+
+  // Navigation state
+  document.getElementById('previewPrev').disabled = (index === 0);
+  document.getElementById('previewNext').disabled = (index === generatedBlobs.length - 1);
+
+  // Re-trigger entrance animation
+  const wrap = document.getElementById('previewImgWrap');
+  wrap.style.animation = 'none';
+  wrap.offsetHeight; // force reflow
+  wrap.style.animation = '';
+}
+
+function previewNavigate(dir) {
+  const next = previewIndex + dir;
+  if (next < 0 || next >= generatedBlobs.length) return;
+  previewIndex = next;
+  showPreviewAt(previewIndex);
+}
+
+function previewDownloadCurrent() {
+  if (previewIndex < 0 || !generatedBlobs[previewIndex]) return;
+  const item = generatedBlobs[previewIndex];
+  const url = URL.createObjectURL(item.blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = item.name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+// Wire up preview controls
+document.getElementById('previewClose').addEventListener('click', closePreview);
+document.getElementById('previewPrev').addEventListener('click', () => previewNavigate(-1));
+document.getElementById('previewNext').addEventListener('click', () => previewNavigate(1));
+document.getElementById('previewDownload').addEventListener('click', previewDownloadCurrent);
+
+// Close on backdrop click
+document.getElementById('previewBody').addEventListener('click', e => {
+  if (e.target === document.getElementById('previewBody')) closePreview();
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  const overlay = document.getElementById('previewOverlay');
+  if (!overlay.classList.contains('open')) return;
+  switch (e.key) {
+    case 'Escape':      closePreview(); break;
+    case 'ArrowLeft':   previewNavigate(-1); break;
+    case 'ArrowRight':  previewNavigate(1); break;
+    case 'd': case 'D': previewDownloadCurrent(); break;
+  }
+});
 
 // Init
 renderTable();
