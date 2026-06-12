@@ -505,6 +505,10 @@ export interface EditorContextType {
   placingColumn: string | null;
   setPlacingColumn: (col: string | null) => void;
 
+  // Custom Color Picker State
+  isPickingColorCanvas: boolean;
+  setIsPickingColorCanvas: (val: boolean) => void;
+
   // Row edits tracking
   rowEdits: Record<number, Record<string, string>>;
 }
@@ -664,6 +668,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   // Placement Mode State
   const [placingColumn, setPlacingColumn] = useState<string | null>(null);
+
+  // Custom Color Picker State
+  const [isPickingColorCanvas, setIsPickingColorCanvas] = useState(false);
 
   // Cleanup object URL on change
   const setPosterFile = (file: File | null) => {
@@ -1291,6 +1298,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
         placingColumn,
         setPlacingColumn,
+        isPickingColorCanvas,
+        setIsPickingColorCanvas,
         rowEdits,
         undo,
         redo,

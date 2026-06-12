@@ -29,6 +29,8 @@ export default function FloatingToolbar() {
     redo,
     canUndo,
     canRedo,
+    isPickingColorCanvas,
+    setIsPickingColorCanvas,
   } = useEditor();
 
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
@@ -75,13 +77,17 @@ export default function FloatingToolbar() {
   }, []);
 
   const handlePickColor = async () => {
-    if (!supportsEyeDropper || !selectedLayerId) return;
-    try {
-      const eyeDropper = new (window as any).EyeDropper();
-      const result = await eyeDropper.open();
-      updateLayer(selectedLayerId, { fontColor: result.sRGBHex });
-    } catch (err) {
-      console.log("Color picker canceled:", err);
+    if (!selectedLayerId) return;
+    if (supportsEyeDropper) {
+      try {
+        const eyeDropper = new (window as any).EyeDropper();
+        const result = await eyeDropper.open();
+        updateLayer(selectedLayerId, { fontColor: result.sRGBHex });
+      } catch (err) {
+        console.log("Color picker canceled:", err);
+      }
+    } else {
+      setIsPickingColorCanvas(true);
     }
   };
 
@@ -123,7 +129,10 @@ export default function FloatingToolbar() {
       {/* Left: Branding */}
       <div className="flex items-center gap-3">
         <img src="/icon.png" alt="Posterly Logo" className="h-13 w-13 object-contain rounded-xl shadow-md shadow-violet-500/10" />
-        <span className="font-black text-sm tracking-wide text-white">Posterly Studio</span>
+        <span className="font-black text-sm tracking-wide text-white">
+          <span className="inline md:hidden">Posterly</span>
+          <span className="hidden md:inline">Posterly Studio</span>
+        </span>
       </div>
 
       {/* Middle: Designing Sections */}
@@ -248,16 +257,14 @@ export default function FloatingToolbar() {
               disabled={!selectedLayer}
               className="h-5 w-5 cursor-pointer rounded border-none bg-transparent disabled:cursor-not-allowed"
             />
-            {supportsEyeDropper && (
-              <button
-                onClick={handlePickColor}
-                disabled={!selectedLayer}
-                className="p-1 hover:bg-white/10 rounded-lg text-white/70 hover:text-white cursor-pointer disabled:cursor-not-allowed"
-                title="Pick color from poster"
-              >
-                <Pipette className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              onClick={handlePickColor}
+              disabled={!selectedLayer}
+              className="p-1 hover:bg-white/10 rounded-lg text-white/70 hover:text-white cursor-pointer disabled:cursor-not-allowed"
+              title="Pick color from poster"
+            >
+              <Pipette className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Bold Toggle */}

@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Stage, Layer, Image as KonvaImage, Text as KonvaText, Transformer, Rect, Group } from "react-konva";
 import { useEditor, TextLayer } from "@/store/editorstore";
-import { Download, Plus, Minus, RotateCcw, Search } from "lucide-react";
+import { Download, Plus, Minus, RotateCcw, Search, Undo, Redo } from "lucide-react";
+import Konva from "konva";
+
+Konva.hitOnDragEnabled = true;
 
 export default function CanvasArea() {
   const {
@@ -17,6 +20,12 @@ export default function CanvasArea() {
     csvPreviews,
     placingColumn,
     setPlacingColumn,
+    isPickingColorCanvas,
+    setIsPickingColorCanvas,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useEditor();
 
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
@@ -25,6 +34,7 @@ export default function CanvasArea() {
     lastDist: 0,
     lastCenter: null,
   });
+  const dragStoppedRef = useRef(false);
   const [zoom, setZoom] = useState(1);
   const [zoomInput, setZoomInput] = useState("100%");
   const [showZoomDropdown, setShowZoomDropdown] = useState(false);
@@ -58,6 +68,9 @@ export default function CanvasArea() {
       return;
     }
     const img = new Image();
+    if (posterUrl.startsWith("http")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       setImageEl(img);
     };
@@ -167,6 +180,39 @@ export default function CanvasArea() {
 
   // Click handler for Stage (creates a field if placing, otherwise deselects)
   const handleStageClick = (e: any) => {
+    // If in custom color picker mode, sample the pixel color
+    if (isPickingColorCanvas) {
+      const stage = e.target.getStage();
+      const pointer = stage.getPointerPosition();
+      if (pointer) {
+        const canvas = stage.container().querySelector("canvas");
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            const ratio = window.devicePixelRatio || 1;
+            const x = pointer.x * ratio;
+            const y = pointer.y * ratio;
+            try {
+              const imgData = ctx.getImageData(x, y, 1, 1).data;
+              const r = imgData[0];
+              const g = imgData[1];
+              const b = imgData[2];
+              const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+              
+              if (selectedLayerId) {
+                updateLayer(selectedLayerId, { fontColor: hex });
+              }
+            } catch (err) {
+              console.error("CORS / canvas read error picking color:", err);
+              alert("Could not pick color from poster due to browser security constraints.");
+            }
+          }
+        }
+      }
+      setIsPickingColorCanvas(false);
+      return;
+    }
+
     // 1. If in placement mode, drop the field at clicked position
     if (placingColumn) {
       const stage = e.target.getStage();
@@ -331,62 +377,106 @@ export default function CanvasArea() {
     applyZoomFromInput(zoomInput);
   };
 
+  const handleTouchStart = (e: any) => {
+    const touches = e.evt.touches;
+    if (touches && touches.length === 2) {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const stageBox = stage.container().getBoundingClientRect();
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      const p1 = {
+        x: touch1.clientX - stageBox.left,
+        y: touch1.clientY - stageBox.top,
+      };
+      const p2 = {
+        x: touch2.clientX - stageBox.left,
+        y: touch2.clientY - stageBox.top,
+      };
+      touchStateRef.current.lastDist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+      touchStateRef.current.lastCenter = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+  };
+
   const handleTouchMove = (e: any) => {
     const stage = stageRef.current;
     if (!stage) return;
 
     const touches = e.evt.touches;
-    if (touches && touches.length === 2) {
-      // Pinch to zoom
-      e.evt.preventDefault();
-      
+    if (touches) {
       const touch1 = touches[0];
       const touch2 = touches[1];
 
-      const p1 = { x: touch1.clientX, y: touch1.clientY };
-      const p2 = { x: touch2.clientX, y: touch2.clientY };
-
-      const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-
-      if (touchStateRef.current.lastDist > 0) {
-        const oldScale = stage.scaleX();
-        const scaleFactor = dist / touchStateRef.current.lastDist;
-        let newScale = oldScale * scaleFactor;
-
-        // Limit zoom between 0.4x and 5.0x
-        newScale = Math.min(Math.max(newScale, 0.4), 5.0);
-
-        const stageBox = stage.container().getBoundingClientRect();
-        const clientCenterX = center.x - stageBox.left;
-        const clientCenterY = center.y - stageBox.top;
-
-        const mousePointTo = {
-          x: (clientCenterX - stage.x()) / oldScale,
-          y: (clientCenterY - stage.y()) / oldScale,
-        };
-
-        stage.scale({ x: newScale, y: newScale });
-
-        const newPos = {
-          x: clientCenterX - mousePointTo.x * newScale,
-          y: clientCenterY - mousePointTo.y * newScale,
-        };
-
-        stage.position(newPos);
-        stage.batchDraw();
-
-        setZoom(newScale);
+      // Restore dragging if cancelled by multi-touch and now only one finger is touching
+      if (touch1 && !touch2 && !stage.isDragging() && dragStoppedRef.current) {
+        stage.startDrag();
+        dragStoppedRef.current = false;
       }
 
-      touchStateRef.current.lastDist = dist;
-      touchStateRef.current.lastCenter = center;
+      if (touch1 && touch2) {
+        // Pinch to zoom
+        e.evt.preventDefault();
+
+        // Stop Konva's default drag during multi-touch pinch to avoid conflicts
+        if (stage.isDragging()) {
+          dragStoppedRef.current = true;
+          stage.stopDrag();
+        }
+
+        const stageBox = stage.container().getBoundingClientRect();
+        const p1 = {
+          x: touch1.clientX - stageBox.left,
+          y: touch1.clientY - stageBox.top,
+        };
+        const p2 = {
+          x: touch2.clientX - stageBox.left,
+          y: touch2.clientY - stageBox.top,
+        };
+
+        const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+
+        if (touchStateRef.current.lastDist > 0 && touchStateRef.current.lastCenter) {
+          const oldScale = stage.scaleX();
+          const scaleFactor = dist / touchStateRef.current.lastDist;
+          let newScale = oldScale * scaleFactor;
+
+          // Limit zoom between 0.4x and 5.0x
+          newScale = Math.min(Math.max(newScale, 0.4), 5.0);
+
+          // Calculate center coordinates relative to the stage
+          const mousePointTo = {
+            x: (center.x - stage.x()) / oldScale,
+            y: (center.y - stage.y()) / oldScale,
+          };
+
+          stage.scale({ x: newScale, y: newScale });
+
+          // Calculate panning difference (dx, dy) of the pinch center
+          const dx = center.x - touchStateRef.current.lastCenter.x;
+          const dy = center.y - touchStateRef.current.lastCenter.y;
+
+          const newPos = {
+            x: center.x - mousePointTo.x * newScale + dx,
+            y: center.y - mousePointTo.y * newScale + dy,
+          };
+
+          stage.position(newPos);
+          stage.batchDraw();
+
+          setZoom(newScale);
+        }
+
+        touchStateRef.current.lastDist = dist;
+        touchStateRef.current.lastCenter = center;
+      }
     }
   };
 
   const handleTouchEnd = () => {
     touchStateRef.current.lastDist = 0;
     touchStateRef.current.lastCenter = null;
+    dragStoppedRef.current = false;
   };
 
   // Pan Stage Drag Handling
@@ -476,6 +566,28 @@ export default function CanvasArea() {
         >
           {/* Main Controls Row */}
           <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-[#1f2937]/80 border border-white/10 shadow-lg backdrop-blur-md">
+            {/* Undo Button (Mobile only) */}
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              className="md:hidden p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 active:scale-95 transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo className="w-4 h-4" />
+            </button>
+
+            {/* Redo Button (Mobile only) */}
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              className="md:hidden p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 active:scale-95 transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              title="Redo (Ctrl+Y)"
+            >
+              <Redo className="w-4 h-4" />
+            </button>
+
+            <div className="md:hidden w-px h-5 bg-white/10" />
+
             {/* Reset / Fit Page Button */}
             <button
               onClick={handleResetZoom}
@@ -557,6 +669,7 @@ export default function CanvasArea() {
           onTap={handleStageClick}
           onWheel={handleWheel}
           draggable={!placingColumn}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onDragStart={handleStageDragStart}
@@ -628,10 +741,12 @@ export default function CanvasArea() {
                       });
                     }}
                     onClick={(e) => {
+                      if (isPickingColorCanvas) return;
                       e.cancelBubble = true;
                       setSelectedLayerId(layer.id);
                     }}
                     onTap={(e) => {
+                      if (isPickingColorCanvas) return;
                       e.cancelBubble = true;
                       setSelectedLayerId(layer.id);
                     }}
@@ -696,6 +811,18 @@ export default function CanvasArea() {
       {placingColumn && (
         <div className="absolute bottom-8 bg-violet-600/90 text-white border border-violet-500/30 text-xs px-4 py-2 rounded-xl shadow-lg animate-bounce backdrop-blur z-20">
           Placement Mode: Click anywhere on the poster to drop field <strong>"{placingColumn}"</strong>
+        </div>
+      )}
+
+      {isPickingColorCanvas && (
+        <div className="absolute bottom-8 bg-violet-600/95 text-white border border-violet-500/30 text-xs px-4 py-2.5 rounded-xl shadow-lg animate-bounce backdrop-blur z-20 flex items-center gap-3">
+          <span>Pipette Mode: Tap anywhere on the poster to pick its color.</span>
+          <button 
+            onClick={() => setIsPickingColorCanvas(false)}
+            className="px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded-md font-bold transition cursor-pointer"
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>

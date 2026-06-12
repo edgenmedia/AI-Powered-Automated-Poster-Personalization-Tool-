@@ -54,7 +54,9 @@ export default function MobileDock() {
     generatePromptPreview,
     previewedPrompt,
     setPreviewedPrompt,
-    isPreviewingPrompt
+    isPreviewingPrompt,
+    isPickingColorCanvas,
+    setIsPickingColorCanvas,
   } = useEditor();
 
   const [activeTab, setActiveTab] = useState<TabType | null>(null);
@@ -162,14 +164,18 @@ export default function MobileDock() {
   };
 
   const handlePickColor = async () => {
-    if (!supportsEyeDropper || !selectedLayerId) return;
+    if (!selectedLayerId) return;
     setActiveTab(null); // Temporarily close the drawer so they can see the poster clearly
-    try {
-      const eyeDropper = new (window as any).EyeDropper();
-      const result = await eyeDropper.open();
-      updateLayer(selectedLayerId, { fontColor: result.sRGBHex });
-    } catch (err) {
-      console.log("Color picker canceled:", err);
+    if (supportsEyeDropper) {
+      try {
+        const eyeDropper = new (window as any).EyeDropper();
+        const result = await eyeDropper.open();
+        updateLayer(selectedLayerId, { fontColor: result.sRGBHex });
+      } catch (err) {
+        console.log("Color picker canceled:", err);
+      }
+    } else {
+      setIsPickingColorCanvas(true);
     }
   };
 
@@ -632,11 +638,9 @@ export default function MobileDock() {
                       <label className="text-[10px] font-semibold uppercase text-white/50 tracking-wider">Color</label>
                       <div className="flex items-center gap-2 mt-1 bg-white/10 rounded-xl border border-white/10 px-3 py-1.5">
                         <input type="color" value={selectedLayer.fontColor} onChange={(e) => updateLayer(selectedLayer.id, { fontColor: e.target.value })} className="h-6 w-6 cursor-pointer bg-transparent border-none rounded" />
-                        {supportsEyeDropper && (
-                          <button onClick={handlePickColor} className="p-1 hover:bg-white/10 rounded-lg text-white/70">
-                            <Pipette className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button onClick={handlePickColor} className="p-1 hover:bg-white/10 rounded-lg text-white/70" title="Pick color from poster">
+                          <Pipette className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
